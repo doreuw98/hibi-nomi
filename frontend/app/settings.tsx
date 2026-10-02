@@ -3,14 +3,16 @@ import { Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import * as Sharing from "expo-sharing";
-import { DownloadSimple, Drop, Palette } from "phosphor-react-native";
+import { DownloadSimple, Drop, Palette, SlidersHorizontal } from "phosphor-react-native";
 
 import { StackHeader } from "@/src/components/StackHeader";
 import { Button, Card, Field, SectionTitle } from "@/src/components/ui";
+import { DEFAULT_PRESETS, PresetsSheet } from "@/src/components/PresetsSheet";
 import { useToast } from "@/src/context/toast";
 import { useAuth } from "@/src/context/auth";
 import { useProfile, useUpdateProfile } from "@/src/api/hooks";
 import { api } from "@/src/api/client";
+import { formatVolume } from "@/src/lib/format";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 export default function Settings() {
@@ -24,12 +26,14 @@ export default function Settings() {
 
   const [name, setName] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   useEffect(() => {
     setName(user?.name || profile?.name || "");
   }, [user, profile]);
 
   const unit = profile?.preferred_unit || "ml";
+  const presets = profile?.quick_presets?.length ? profile.quick_presets : DEFAULT_PRESETS;
 
   const setUnit = async (u: "ml" | "l") => {
     if (u === unit) return;
@@ -136,6 +140,29 @@ export default function Settings() {
           </View>
         </Card>
 
+        {/* Quick-add presets */}
+        <SectionTitle style={{ marginTop: spacing.lg }}>Quick-add buttons</SectionTitle>
+        <Card>
+          <View style={styles.rowHead}>
+            <SlidersHorizontal size={20} color={colors.brandPrimary} weight="fill" />
+            <Text style={styles.rowTitle}>Your presets</Text>
+          </View>
+          <View style={styles.presetRow} testID="settings-presets-preview">
+            {presets.map((ml) => (
+              <View key={ml} style={styles.presetChip}>
+                <Text style={styles.presetChipText}>+{formatVolume(ml, unit)}</Text>
+              </View>
+            ))}
+          </View>
+          <Button
+            title="Edit presets"
+            variant="secondary"
+            onPress={() => setPresetsOpen(true)}
+            testID="settings-edit-presets"
+            style={{ marginTop: spacing.md }}
+          />
+        </Card>
+
         {/* Data */}
         <SectionTitle style={{ marginTop: spacing.lg }}>Your data</SectionTitle>
         <Card>
@@ -150,6 +177,7 @@ export default function Settings() {
           />
         </Card>
       </KeyboardAwareScrollView>
+      <PresetsSheet visible={presetsOpen} onClose={() => setPresetsOpen(false)} presets={presets} unit={unit} />
     </View>
   );
 }
@@ -168,4 +196,7 @@ const useStyles = makeStyles((c) => ({
   themeRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
   themeValue: { marginLeft: "auto", fontFamily: fonts.bold, fontSize: fontSize.base, color: c.muted },
   exportHint: { fontFamily: fonts.medium, fontSize: fontSize.base, color: c.onSurfaceSecondary, lineHeight: 22 },
+  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  presetChip: { backgroundColor: c.brandTertiary, paddingHorizontal: spacing.md, height: 36, borderRadius: radius.pill, justifyContent: "center" },
+  presetChipText: { fontFamily: fonts.extrabold, fontSize: fontSize.sm, color: c.onBrandTertiary },
 }));

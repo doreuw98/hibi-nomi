@@ -16,6 +16,7 @@ import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { CircularProgress } from "@/src/components/CircularProgress";
 import { Button, Card, EmptyState, Field, SectionTitle } from "@/src/components/ui";
 import { Sheet } from "@/src/components/Sheet";
+import { DEFAULT_PRESETS, PresetsSheet } from "@/src/components/PresetsSheet";
 import { useToast } from "@/src/context/toast";
 import {
   useAddIntake,
@@ -29,8 +30,6 @@ import { localDateString, prettyDate, timeOfISO } from "@/src/lib/datetime";
 import { formatVolume, formatVolumeValue, unitLabel, type Unit } from "@/src/lib/format";
 import { usesNativeTabs } from "@/src/navigation";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-
-const PRESETS = [100, 200, 250, 300, 500];
 
 export default function Home() {
   const styles = useStyles();
@@ -46,9 +45,11 @@ export default function Home() {
   const updateIntake = useUpdateIntake();
 
   const unit: Unit = profile?.preferred_unit || "ml";
+  const presets = profile?.quick_presets?.length ? profile.quick_presets : DEFAULT_PRESETS;
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
 
   const [customOpen, setCustomOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [editing, setEditing] = useState<Intake | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -164,13 +165,24 @@ export default function Home() {
         </Animated.View>
 
         {/* Quick add */}
-        <SectionTitle style={{ marginTop: spacing.lg }}>Quick add</SectionTitle>
+        <View style={styles.quickHead}>
+          <SectionTitle style={{ marginBottom: 0 }}>Quick add</SectionTitle>
+          <Pressable
+            onPress={() => setPresetsOpen(true)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.editPresets, pressed && styles.pillPressed]}
+            testID="edit-presets-button"
+          >
+            <PencilSimple size={16} color={colors.brandPrimary} weight="bold" />
+            <Text style={styles.editPresetsText}>Edit</Text>
+          </Pressable>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillsRow}
         >
-          {PRESETS.map((ml) => (
+          {presets.map((ml) => (
             <Pressable
               key={ml}
               style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
@@ -236,6 +248,9 @@ export default function Home() {
         </Card>
       </ScrollView>
 
+      {/* Presets editor */}
+      <PresetsSheet visible={presetsOpen} onClose={() => setPresetsOpen(false)} presets={presets} unit={unit} />
+
       {/* Custom amount sheet */}
       <Sheet visible={customOpen} onClose={() => setCustomOpen(false)} title="Add custom amount" testID="custom-amount-sheet">
         <Field
@@ -297,6 +312,21 @@ const useStyles = makeStyles((c) => ({
   statValue: { fontFamily: fonts.extrabold, fontSize: fontSize.xl },
   statLabel: { fontFamily: fonts.medium, fontSize: fontSize.sm, color: c.muted },
   pillsRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  quickHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  editPresets: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  editPresetsText: { fontFamily: fonts.bold, fontSize: fontSize.base, color: c.brandPrimary },
   pill: {
     flexShrink: 0,
     flexDirection: "row",

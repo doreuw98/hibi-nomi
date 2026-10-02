@@ -41,6 +41,8 @@ logger = logging.getLogger("hibinomi")
 EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 ACTIVITY_LEVELS = {"sedentary", "light", "moderate", "active", "very_active"}
+DEFAULT_PRESETS = [100, 200, 250, 300, 500]
+MAX_PRESETS = 6
 ACTIVITY_BONUS_ML = {
     "sedentary": 0,
     "light": 250,
@@ -161,6 +163,20 @@ class ProfileIn(BaseModel):
     target_mode: Optional[str] = None
     daily_target: Optional[int] = None
     onboarded: Optional[bool] = None
+    quick_presets: Optional[List[int]] = None
+
+    @field_validator("quick_presets")
+    @classmethod
+    def presets_ok(cls, v):
+        if v is None:
+            return v
+        if not (1 <= len(v) <= MAX_PRESETS):
+            raise ValueError(f"Choose between 1 and {MAX_PRESETS} presets")
+        if any(a <= 0 or a > 5000 for a in v):
+            raise ValueError("Each preset must be between 1 and 5000 ml")
+        if len(set(v)) != len(v):
+            raise ValueError("Presets must be unique")
+        return sorted(v)
 
 
 class CalcTargetIn(BaseModel):
@@ -220,6 +236,7 @@ def public_profile(p: dict) -> dict:
         "target_mode": p.get("target_mode", "auto"),
         "daily_target": p.get("daily_target", 2000),
         "onboarded": p.get("onboarded", False),
+        "quick_presets": p.get("quick_presets") or DEFAULT_PRESETS,
     }
 
 

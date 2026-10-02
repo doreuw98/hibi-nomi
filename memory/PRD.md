@@ -36,9 +36,9 @@ Build HIBI NOMI, a personal daily water-intake tracking mobile app (React Native
 - [x] Profile + Personal Target screen (auto/custom modes, stepper, schedule) + Settings (units, name, CSV export).
 - [x] Onboarding target setup after registration.
 - [x] Nunito fonts, aqua theme, toasts, haptics.
+- [x] Custom quick-add presets: `quick_presets` on profile (1–6 unique values, 1–5000 ml, sorted). Editable via `PresetsSheet` from Home ("Edit" next to Quick add) and Settings ("Quick-add buttons" card). Reset to defaults supported.
 
 ## Backlog / Remaining
-- P1: Configurable quick-add presets (spec notes "configurable in the future").
 - P2: Dark theme; weekly pattern analysis (morning/afternoon) richer insights.
 - P2: Streaks / achievements gamification.
 

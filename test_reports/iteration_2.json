@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only testing of the new Custom Quick-add Presets feature for HIBI NOMI (demo@hibinomi.app). All 5 flows verified end-to-end on mobile viewport 390x844 against the live preview. (1) Home shows 'Quick add' section with default pills 100/200/250/300/500 ml and an 'Edit' button (testID edit-presets-button) that opens the presets sheet. (2) Edit flow: added 750 via preset-amount-input + preset-add-button -> preset-chip-750 appeared sorted; removed 100 via preset-remove-100; presets-save-button closed sheet and Home pills reflected the new set (quick-add-750 present, quick-add-100 gone). (3) Tapping new quick-add-750 added a 750 ml record (consumed 750 -> 1500 ml, history-row-0 shows '750 ml'). (4) Validations: duplicate 200 keeps only one chip; max 6 enforced (adding a 7th preset 600 did not add chip-600); last-chip removal blocked (preset-chip-200 remained after attempt). (5) presets-reset-button + presets-save-button restored Home to defaults 100/200/250/300/500 and removed quick-add-750. (6) Settings screen: Profile tab -> menu-settings -> 'Quick-add buttons' card shows settings-presets-preview with '+100 ml+200 ml+250 ml+300 ml+500 ml'; settings-edit-presets opens the same PresetsSheet. Toasts observed throughout ('Quick-add buttons updated', 'Added 750 ml 💧'). No React Native red screen; no new console errors (same web-only warnings as iteration 1: shadow* deprecated, pointerEvents deprecated, expo-notifications web push listener). Demo user restored to default presets at the end; the 750 ml intake record created during testing was deleted via the Edit record sheet.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PresetsSheet", "issues": ["On a 390x844 viewport with 5-6 chips, the sheet content extends below the fold, which can hide the Save/Reset buttons. The sheet is scrollable so this is usable, but consider making it a scroll-aware fixed-footer layout so the primary CTA ('Save presets') is always visible without scrolling."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_2.json"
+  ],
+  "action_items": [
+    "(Nice-to-have UX) Ensure 'Save presets' CTA is always visible in the PresetsSheet without needing to scroll when 5-6 chips are present on small mobile viewports.",
+    "(From iteration 1, still open) Migrate shadow* style props to boxShadow for react-native-web cleanliness."
+  ],
+  "critical_code_review_comments": [
+    "PresetsSheet.tsx (134 lines) is clean and focused; validation (duplicate / max / last-remaining / >5000 ml / NaN) is handled with toast feedback — good.",
+    "Both Home (index.tsx) and Settings (settings.tsx) correctly fall back to DEFAULT_PRESETS when profile.quick_presets is empty.",
+    "testID coverage is comprehensive on all interactive elements of the feature (edit-presets-button, presets-sheet, preset-chip-<ml>, preset-remove-<ml>, preset-amount-input, preset-add-button, presets-save-button, presets-reset-button, settings-presets-preview, settings-edit-presets)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not retested per request)", "frontend": "100% (5/5 feature flows passed: default pills, edit+save, tap new preset, validation suite, reset+save, Settings integration)"},
+  "seed_data_creation": "Created and deleted 1 transient intake (750 ml) on demo@hibinomi.app during T2. Final state: demo user restored to default presets [100,200,250,300,500] and only the original 2 pre-existing intake records remain.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Custom Quick-add Presets feature is fully working on web preview. Key testIDs: edit-presets-button, presets-sheet, preset-chip-<ml>, preset-remove-<ml>, preset-amount-input, preset-add-button, presets-save-button, presets-reset-button, quick-add-<ml>, settings-presets-preview, settings-edit-presets. The PresetsSheet is scrollable — use element.scroll_into_view_if_needed() before clicking preset-add-button / presets-save-button on mobile viewport. Same for edit-delete-button in the Edit record sheet.",
+  "rca_of_issue": "N/A — no bugs found."
+}
