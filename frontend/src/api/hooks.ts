@@ -14,7 +14,7 @@ export type Profile = {
   target_mode: "auto" | "custom";
   daily_target: number;
   onboarded: boolean;
-  quick_presets: number[];
+  quick_presets: { amount_ml: number; icon: string }[];
 };
 
 export type Intake = {

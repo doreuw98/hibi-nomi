@@ -1,0 +1,42 @@
+{
+  "summary": "Icons-on-presets feature verified end-to-end on BOTH backend and frontend. Backend: new /app/backend/tests/test_presets_icons.py — 10/10 passed. Frontend: full Playwright flow on 390x844 with demo@hibinomi.app covering every acceptance criterion in the request (default icons on pills, icon picker on sheet, chip-selected label, icon change persists on Home, reopen+highlight confirms persistence, add new size 750 ml with jar icon via focused input (deselects chip → 'Icon for new size'), tap quick-add-750 logs 750 ml, remove via preset-remove-<ml>, reset+save restores defaults WITH default icons, Settings preview shows icons + button opens sheet). Cleanup done: 750 ml intake deleted, demo user presets reset to defaults [{100,glass},{200,glass},{250,glass},{300,mug},{500,bottle}]. Full regression (pytest -o addopts= -v) on backend passed 25/25; running under xdist gives 3 flakes in Reports/CSV classes (pre-existing cross-worker fixture issue in backend_test.py — user_a fixture is module-scoped but xdist LoadScope splits classes across workers, so Reports/CSV asserts has_data=True on a worker that never saw TestIntakes). This flake predates the icons feature. No React Native red screen; no new deprecated packages introduced for this feature. Verification SVG-level: icon changes were asserted by comparing phosphor-react-native path `d` attribute signatures of each pill before/after, confirming the actual rendered icon changed (not just state).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "pytest xdist (test harness, not product)", "issue": "backend_test.py's module-scoped user_a fixture is not safe under pytest-xdist LoadScope — TestIntakes seeds intakes on worker A but TestReports/TestExport run on worker B against a fresh user, so has_data=False and CSV has 0 rows. Fix: either scope user_a to 'session' + explicitly seed intakes in Report/Export class setup, or set --dist loadfile. Pre-existing; not caused by icons feature. Serial run (addopts stripped) passes 25/25."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_presets_icons.py",
+    "/app/test_reports/pytest/pytest_presets_icons.xml",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional, test-harness only) Make backend_test.py xdist-safe: either scope user_a to 'session' and ensure TestIntakes runs before Reports/CSV on the same worker, or configure --dist loadfile so all classes in that file share one worker. Does not block the icons feature."
+  ],
+  "critical_code_review_comments": [
+    "server.py normalize_presets() correctly handles legacy integer presets AND new {amount_ml, icon} dicts, falling back to default_preset_icon() when icon missing — good forward/backward compatibility.",
+    "PresetIn validates icon against the 6-key allowlist with 422 on unknown (verified: 'rocket' -> 422). amount_ml 1..5000 bound still enforced.",
+    "PresetsSheet 'activeIcon' derivation correctly switches between selected-chip icon and new-size newIcon (with defaultIcon fallback based on the typed amount) — matches spec: 'focusing deselects chip, label Icon for new size'.",
+    "iconFor() in presets.ts falls back to Drop for unknown keys — safe render even if backend ever returns a bad key.",
+    "testID coverage is complete and matches the review request exactly: preset-icon-picker, preset-icon-{glass,mug,bottle,drop,wine,jar}, preset-chip-<ml>, preset-remove-<ml>, preset-amount-input, preset-add-button, presets-save-button, presets-reset-button, quick-add-<ml>, settings-presets-preview, settings-edit-presets."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_presets_icons.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 preset-icon tests + 25/25 regression serial; 32/35 under xdist due to pre-existing fixture race, unrelated)",
+    "frontend": "100% (all 7 request bullets verified: default icons, picker row, icon change + persistence + highlight, add-with-jar + tap-logs-750, remove, reset-with-default-icons, Settings preview+edit)"
+  },
+  "seed_data_creation": "Created and immediately deleted one 750 ml intake on demo@hibinomi.app during the icon-tap verification. Demo user presets restored to defaults [{100,glass},{200,glass},{250,glass},{300,mug},{500,bottle}]. Several TEST_<uuid>@hibinomi.app accounts created by the two pytest files (pre-existing pattern, same as iteration 1).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Icons feature is stable. Preset shape in GET/PUT /api/profile is [{amount_ml:int, icon:'glass|mug|bottle|drop|wine|jar'}]. default_preset_icon mapping on backend: ml<300 -> glass, 300<=ml<500 -> mug, ml>=500 -> bottle (identical mapping on frontend via defaultIcon in src/lib/presets.ts). To assert icon rendering in Playwright, compare SVG inner <path d=...> signatures of the quick-add pills (phosphor-react-native renders unique paths per icon); using class names or role is unreliable. Watch out: /app/backend/tests/backend_test.py is NOT xdist-safe (see action_items); run with `pytest -o addopts= backend/tests/` to get a clean 35/35 serial pass if needed.",
+  "rca_of_issue": "N/A — feature works. Flaky backend_test.py xdist failures RCA: pytest-xdist LoadScope splits classes to workers; module-scoped user_a is instantiated per worker, so a worker that only runs TestReports/TestExport has a user with no intakes and thus has_data=False / 0 CSV rows. Mitigation: switch distribution to loadfile, or seed intakes within the TestReports class."
+}

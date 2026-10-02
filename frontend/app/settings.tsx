@@ -7,7 +7,8 @@ import { DownloadSimple, Drop, Palette, SlidersHorizontal } from "phosphor-react
 
 import { StackHeader } from "@/src/components/StackHeader";
 import { Button, Card, Field, SectionTitle } from "@/src/components/ui";
-import { DEFAULT_PRESETS, PresetsSheet } from "@/src/components/PresetsSheet";
+import { PresetsSheet } from "@/src/components/PresetsSheet";
+import { DEFAULT_PRESETS, iconFor, type Preset } from "@/src/lib/presets";
 import { useToast } from "@/src/context/toast";
 import { useAuth } from "@/src/context/auth";
 import { useProfile, useUpdateProfile } from "@/src/api/hooks";
@@ -33,7 +34,7 @@ export default function Settings() {
   }, [user, profile]);
 
   const unit = profile?.preferred_unit || "ml";
-  const presets = profile?.quick_presets?.length ? profile.quick_presets : DEFAULT_PRESETS;
+  const presets: Preset[] = profile?.quick_presets?.length ? (profile.quick_presets as Preset[]) : DEFAULT_PRESETS;
 
   const setUnit = async (u: "ml" | "l") => {
     if (u === unit) return;
@@ -148,11 +149,15 @@ export default function Settings() {
             <Text style={styles.rowTitle}>Your presets</Text>
           </View>
           <View style={styles.presetRow} testID="settings-presets-preview">
-            {presets.map((ml) => (
-              <View key={ml} style={styles.presetChip}>
-                <Text style={styles.presetChipText}>+{formatVolume(ml, unit)}</Text>
-              </View>
-            ))}
+            {presets.map((p) => {
+              const ChipIcon = iconFor(p.icon);
+              return (
+                <View key={p.amount_ml} style={styles.presetChip}>
+                  <ChipIcon size={14} color={colors.onBrandTertiary} weight="fill" />
+                  <Text style={styles.presetChipText}>+{formatVolume(p.amount_ml, unit)}</Text>
+                </View>
+              );
+            })}
           </View>
           <Button
             title="Edit presets"
@@ -197,6 +202,6 @@ const useStyles = makeStyles((c) => ({
   themeValue: { marginLeft: "auto", fontFamily: fonts.bold, fontSize: fontSize.base, color: c.muted },
   exportHint: { fontFamily: fonts.medium, fontSize: fontSize.base, color: c.onSurfaceSecondary, lineHeight: 22 },
   presetRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  presetChip: { backgroundColor: c.brandTertiary, paddingHorizontal: spacing.md, height: 36, borderRadius: radius.pill, justifyContent: "center" },
+  presetChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.brandTertiary, paddingHorizontal: spacing.md, height: 36, borderRadius: radius.pill },
   presetChipText: { fontFamily: fonts.extrabold, fontSize: fontSize.sm, color: c.onBrandTertiary },
 }));

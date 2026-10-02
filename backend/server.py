@@ -43,6 +43,28 @@ EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/
 ACTIVITY_LEVELS = {"sedentary", "light", "moderate", "active", "very_active"}
 DEFAULT_PRESETS = [100, 200, 250, 300, 500]
 MAX_PRESETS = 6
+PRESET_ICONS = {"glass", "mug", "bottle", "drop", "wine", "jar"}
+
+
+def default_preset_icon(ml: int) -> str:
+    if ml >= 500:
+        return "bottle"
+    if ml >= 300:
+        return "mug"
+    return "glass"
+
+
+def normalize_presets(raw) -> list:
+    """Accept legacy int lists or dict lists; always return [{amount_ml, icon}]."""
+    items = raw or DEFAULT_PRESETS
+    out = []
+    for p in items:
+        if isinstance(p, dict):
+            ml = int(p.get("amount_ml", 0))
+            out.append({"amount_ml": ml, "icon": p.get("icon") or default_preset_icon(ml)})
+        else:
+            out.append({"amount_ml": int(p), "icon": default_preset_icon(int(p))})
+    return out
 ACTIVITY_BONUS_ML = {
     "sedentary": 0,
     "light": 250,
@@ -163,7 +185,7 @@ class ProfileIn(BaseModel):
     target_mode: Optional[str] = None
     daily_target: Optional[int] = None
     onboarded: Optional[bool] = None
-    quick_presets: Optional[List[int]] = None
+    quick_presets: Optional[List["PresetIn"]] = None
 
     @field_validator("quick_presets")
     @classmethod
@@ -172,11 +194,32 @@ class ProfileIn(BaseModel):
             return v
         if not (1 <= len(v) <= MAX_PRESETS):
             raise ValueError(f"Choose between 1 and {MAX_PRESETS} presets")
-        if any(a <= 0 or a > 5000 for a in v):
-            raise ValueError("Each preset must be between 1 and 5000 ml")
-        if len(set(v)) != len(v):
+        amounts = [p.amount_ml for p in v]
+        if len(set(amounts)) != len(amounts):
             raise ValueError("Presets must be unique")
-        return sorted(v)
+        return sorted(v, key=lambda p: p.amount_ml)
+
+
+class PresetIn(BaseModel):
+    amount_ml: int
+    icon: str = "drop"
+
+    @field_validator("amount_ml")
+    @classmethod
+    def amt(cls, v):
+        if v <= 0 or v > 5000:
+            raise ValueError("Each preset must be between 1 and 5000 ml")
+        return v
+
+    @field_validator("icon")
+    @classmethod
+    def icon_ok(cls, v):
+        if v not in PRESET_ICONS:
+            raise ValueError("Unknown preset icon")
+        return v
+
+
+ProfileIn.model_rebuild()
 
 
 class CalcTargetIn(BaseModel):
@@ -236,7 +279,7 @@ def public_profile(p: dict) -> dict:
         "target_mode": p.get("target_mode", "auto"),
         "daily_target": p.get("daily_target", 2000),
         "onboarded": p.get("onboarded", False),
-        "quick_presets": p.get("quick_presets") or DEFAULT_PRESETS,
+        "quick_presets": normalize_presets(p.get("quick_presets")),
     }
 
 

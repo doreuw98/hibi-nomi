@@ -16,7 +16,8 @@ import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { CircularProgress } from "@/src/components/CircularProgress";
 import { Button, Card, EmptyState, Field, SectionTitle } from "@/src/components/ui";
 import { Sheet } from "@/src/components/Sheet";
-import { DEFAULT_PRESETS, PresetsSheet } from "@/src/components/PresetsSheet";
+import { PresetsSheet } from "@/src/components/PresetsSheet";
+import { DEFAULT_PRESETS, iconFor, type Preset } from "@/src/lib/presets";
 import { useToast } from "@/src/context/toast";
 import {
   useAddIntake,
@@ -45,7 +46,7 @@ export default function Home() {
   const updateIntake = useUpdateIntake();
 
   const unit: Unit = profile?.preferred_unit || "ml";
-  const presets = profile?.quick_presets?.length ? profile.quick_presets : DEFAULT_PRESETS;
+  const presets: Preset[] = profile?.quick_presets?.length ? (profile.quick_presets as Preset[]) : DEFAULT_PRESETS;
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
 
   const [customOpen, setCustomOpen] = useState(false);
@@ -182,17 +183,20 @@ export default function Home() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillsRow}
         >
-          {presets.map((ml) => (
-            <Pressable
-              key={ml}
-              style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
-              onPress={() => quickAdd(ml)}
-              testID={`quick-add-${ml}`}
-            >
-              <Drop size={20} color={colors.onBrandTertiary} weight="fill" />
-              <Text style={styles.pillText}>+{formatVolume(ml, unit)}</Text>
-            </Pressable>
-          ))}
+          {presets.map((p) => {
+            const PillIcon = iconFor(p.icon);
+            return (
+              <Pressable
+                key={p.amount_ml}
+                style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
+                onPress={() => quickAdd(p.amount_ml)}
+                testID={`quick-add-${p.amount_ml}`}
+              >
+                <PillIcon size={20} color={colors.onBrandTertiary} weight="fill" />
+                <Text style={styles.pillText}>+{formatVolume(p.amount_ml, unit)}</Text>
+              </Pressable>
+            );
+          })}
           <Pressable
             style={({ pressed }) => [styles.pillCustom, pressed && styles.pillPressed]}
             onPress={() => setCustomOpen(true)}

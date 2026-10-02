@@ -7,15 +7,21 @@ import { Button, Field } from "@/src/components/ui";
 import { useToast } from "@/src/context/toast";
 import { useUpdateProfile } from "@/src/api/hooks";
 import { formatVolume, unitLabel, type Unit } from "@/src/lib/format";
+import {
+  DEFAULT_PRESETS,
+  MAX_PRESETS,
+  PRESET_ICONS,
+  defaultIcon,
+  iconFor,
+  type Preset,
+  type PresetIconKey,
+} from "@/src/lib/presets";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-
-export const DEFAULT_PRESETS = [100, 200, 250, 300, 500];
-export const MAX_PRESETS = 6;
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  presets: number[];
+  presets: Preset[];
   unit: Unit;
 };
 
@@ -25,28 +31,50 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
   const toast = useToast();
   const updateProfile = useUpdateProfile();
 
-  const [draft, setDraft] = useState<number[]>(presets);
+  const [draft, setDraft] = useState<Preset[]>(presets);
   const [amount, setAmount] = useState("");
+  // Which chip the icon picker edits; null = the new preset being typed.
+  const [selected, setSelected] = useState<number | null>(null);
+  const [newIcon, setNewIcon] = useState<PresetIconKey | null>(null);
 
   useEffect(() => {
     if (visible) {
       setDraft(presets);
       setAmount("");
+      setSelected(null);
+      setNewIcon(null);
     }
   }, [visible, presets]);
 
+  const parsedMl = (() => {
+    const p = parseFloat(amount);
+    if (isNaN(p) || p <= 0) return null;
+    return unit === "l" ? Math.round(p * 1000) : Math.round(p);
+  })();
+
+  const activeIcon: PresetIconKey =
+    selected !== null
+      ? draft.find((p) => p.amount_ml === selected)?.icon ?? "drop"
+      : newIcon ?? defaultIcon(parsedMl ?? 0);
+
+  const pickIcon = (key: PresetIconKey) => {
+    if (selected !== null) {
+      setDraft(draft.map((p) => (p.amount_ml === selected ? { ...p, icon: key } : p)));
+    } else {
+      setNewIcon(key);
+    }
+  };
+
   const addPreset = () => {
-    const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0) {
+    if (parsedMl === null) {
       toast.show("Enter a valid amount", "error");
       return;
     }
-    const ml = unit === "l" ? Math.round(parsed * 1000) : Math.round(parsed);
-    if (ml > 5000) {
+    if (parsedMl > 5000) {
       toast.show("Max 5000 ml per preset", "error");
       return;
     }
-    if (draft.includes(ml)) {
+    if (draft.some((p) => p.amount_ml === parsedMl)) {
       toast.show("That size is already a preset", "info");
       return;
     }
@@ -54,8 +82,10 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
       toast.show(`You can have up to ${MAX_PRESETS} presets`, "error");
       return;
     }
-    setDraft([...draft, ml].sort((a, b) => a - b));
+    const next: Preset = { amount_ml: parsedMl, icon: newIcon ?? defaultIcon(parsedMl) };
+    setDraft([...draft, next].sort((a, b) => a.amount_ml - b.amount_ml));
     setAmount("");
+    setNewIcon(null);
   };
 
   const removePreset = (ml: number) => {
@@ -63,7 +93,8 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
       toast.show("Keep at least one preset", "info");
       return;
     }
-    setDraft(draft.filter((p) => p !== ml));
+    setDraft(draft.filter((p) => p.amount_ml !== ml));
+    if (selected === ml) setSelected(null);
   };
 
   const save = async () => {
@@ -78,12 +109,15 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
 
   return (
     <Sheet visible={visible} onClose={onClose} title="Quick-add presets" testID="presets-sheet">
-      <Text style={styles.hint}>Match your favourite cup and bottle sizes. Tap × to remove one.</Text>
+      <Text style={styles.hint}>Match your cups and bottles. Tap a chip to change its icon, × to remove.</Text>
 
       <View style={styles.chipsHead}>
         <Text style={styles.chipsLabel}>{draft.length}/{MAX_PRESETS} presets</Text>
         <Pressable
-          onPress={() => setDraft(DEFAULT_PRESETS)}
+          onPress={() => {
+            setDraft(DEFAULT_PRESETS);
+            setSelected(null);
+          }}
           hitSlop={8}
           style={styles.resetLink}
           testID="presets-reset-button"
@@ -94,19 +128,51 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
       </View>
 
       <View style={styles.chips} testID="presets-chip-list">
-        {draft.map((ml) => (
-          <View key={ml} style={styles.chip} testID={`preset-chip-${ml}`}>
-            <Text style={styles.chipText}>{formatVolume(ml, unit)}</Text>
+        {draft.map((p) => {
+          const ChipIcon = iconFor(p.icon);
+          const isSel = selected === p.amount_ml;
+          return (
             <Pressable
-              onPress={() => removePreset(ml)}
-              hitSlop={8}
-              style={styles.chipRemove}
-              testID={`preset-remove-${ml}`}
+              key={p.amount_ml}
+              style={[styles.chip, isSel && styles.chipSelected]}
+              onPress={() => setSelected(isSel ? null : p.amount_ml)}
+              testID={`preset-chip-${p.amount_ml}`}
             >
-              <X size={14} color={colors.onBrandTertiary} weight="bold" />
+              <ChipIcon size={16} color={colors.onBrandTertiary} weight="fill" />
+              <Text style={styles.chipText}>{formatVolume(p.amount_ml, unit)}</Text>
+              <Pressable
+                onPress={() => removePreset(p.amount_ml)}
+                hitSlop={8}
+                style={styles.chipRemove}
+                testID={`preset-remove-${p.amount_ml}`}
+              >
+                <X size={14} color={colors.onBrandTertiary} weight="bold" />
+              </Pressable>
             </Pressable>
-          </View>
-        ))}
+          );
+        })}
+      </View>
+
+      <View>
+        <Text style={styles.iconLabel}>
+          {selected !== null ? `Icon for ${formatVolume(selected, unit)}` : "Icon for new size"}
+        </Text>
+        <View style={styles.iconRow} testID="preset-icon-picker">
+          {PRESET_ICONS.map(({ key, label, Icon }) => {
+            const on = activeIcon === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => pickIcon(key)}
+                style={[styles.iconBtn, on && styles.iconBtnOn]}
+                accessibilityLabel={label}
+                testID={`preset-icon-${key}`}
+              >
+                <Icon size={22} color={on ? colors.onBrandPrimary : colors.brandPrimary} weight={on ? "fill" : "regular"} />
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.addRow}>
@@ -116,6 +182,7 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
             testID="preset-amount-input"
             value={amount}
             onChangeText={setAmount}
+            onFocus={() => setSelected(null)}
             keyboardType="decimal-pad"
             placeholder={unit === "l" ? "e.g. 0.75" : "e.g. 750"}
             onSubmitEditing={addPreset}
@@ -152,7 +219,10 @@ const useStyles = makeStyles((c) => ({
     paddingRight: 4,
     height: 40,
     borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: "transparent",
   },
+  chipSelected: { borderColor: c.brandPrimary },
   chipText: { fontFamily: fonts.extrabold, fontSize: fontSize.base, color: c.onBrandTertiary },
   chipRemove: {
     width: 30,
@@ -163,6 +233,17 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surfaceSecondary,
     marginLeft: 2,
   },
+  iconLabel: { fontFamily: fonts.bold, fontSize: fontSize.sm, color: c.muted, marginBottom: spacing.xs },
+  iconRow: { flexDirection: "row", gap: spacing.sm },
+  iconBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: c.surfaceTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBtnOn: { backgroundColor: c.brandPrimary },
   addRow: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm },
   addBtn: {
     width: 52,
