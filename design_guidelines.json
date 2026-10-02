@@ -1,0 +1,164 @@
+{
+  "app_name": "HIBI NOMI",
+  "personality": "4 Tactile / Playful LIGHT",
+  "personality_one_liner": "A fresh, approachable lifestyle tracker that feels like a clean glass of water: bright, soft, fluid, and effortless.",
+  "color": {
+    "surface": "#F2FBFC",
+    "onSurface": "#0F172A",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#0F172A",
+    "surfaceTertiary": "#E2F6F8",
+    "onSurfaceTertiary": "#0F172A",
+    "surfaceInverse": "#082F49",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#06B6D4",
+    "brandPrimary": "#06B6D4",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#38BDF8",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#CFFAFE",
+    "onBrandTertiary": "#0891B2",
+    "success": "#10B981",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59E0B",
+    "onWarning": "#FFFFFF",
+    "error": "#EF4444",
+    "onError": "#FFFFFF",
+    "info": "#0EA5E9",
+    "onInfo": "#FFFFFF",
+    "border": "#E2E8F0",
+    "borderStrong": "#CBD5E1",
+    "divider": "#F1F5F9",
+    "muted": "#64748B",
+    "onBrand": "#FFFFFF"
+  },
+  "typography": {
+    "displayFontFamily": "Nunito",
+    "textFontFamily": "Nunito",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous spacing to ensure the app feels breathable and 'fluid'. Content never sits tight against edges.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "2",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Apply to the bottom tab bar, floating quick-add buttons (if sticky), and sticky bottom sheet handles",
+      "Use heavy tint at 75%+ over active bright backgrounds to ensure crisp readable numbers and text"
+    ],
+    "dont's": [
+      "Do not blur standard list rows or static form fields",
+      "Do not blur the main circular progress indicator; it should remain highly legible"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "purpose": "A seamless entry point featuring a calm water-inspired visual and simple auth options.",
+      "states": {
+        "loading": "Gentle fluid spinner in brand color",
+        "empty": "N/A",
+        "error": "Soft error toast matching the friendly aesthetic, never aggressive"
+      },
+      "layout": "Full-bleed abstract minimal aqua gradient background. A bottom sheet or bottom-aligned white card houses the login controls (Email/password + Google auth). Large touch targets, pill-shaped inputs."
+    },
+    {
+      "name": "Home",
+      "purpose": "The primary dashboard focused entirely on immediate visual feedback of hydration and one-tap logging.",
+      "states": {
+        "loading": "Pulsing skeleton of the circular ring and quick-add pills",
+        "empty": "A clean glass of water illustration hinting to log the first drink",
+        "error": "Retry block overlaid if fetching history fails"
+      },
+      "layout": "Top section: Large, thick circular progress ring displaying volume (e.g., '1200 ml') and goal ('of 2000 ml'). Mid section: Horizontal scrollable row of pill-shaped quick-add buttons (+100ml, +250ml, etc.) colored in brandTertiary for touchability. Bottom section: A clean, rounded white card containing a scrollable history log of today's intake."
+    },
+    {
+      "name": "Reports",
+      "purpose": "Provides a comprehensive bento-grid view of the user's habits, weekly trends, and monthly momentum.",
+      "states": {
+        "loading": "Bento grid skeleton loader",
+        "empty": "Friendly illustration encouraging user to log for a few days to generate insights",
+        "error": "Simple retry button within the main graph card"
+      },
+      "layout": "Bento-style layout. Top: KPI summary cards (streak, total tracked). Middle: Weekly progress bar chart displaying daily volume vs target. Bottom: Monthly achievement calendar using a heat-map dot-grid (each day color-coded based on target achieved/partial/none)."
+    },
+    {
+      "name": "Reminders",
+      "purpose": "Manages hourly nudges with frictionless, playful toggles.",
+      "states": {
+        "loading": "List row skeletons",
+        "empty": "A sleeping water drop icon with a prompt to enable reminders",
+        "error": "Standard inline error message"
+      },
+      "layout": "Large master toggle at the top. Below: Soft rounded cards for interval selection (e.g., Every 1h, 2h), active start/end time pickers. Bottom: Quick-pause action pills (Pause 30m, 1h, until tomorrow)."
+    },
+    {
+      "name": "Profile & Settings",
+      "purpose": "Account management and tracker customization, keeping settings warm and uncomplicated.",
+      "states": {
+        "loading": "Standard spinner",
+        "empty": "N/A",
+        "error": "Standard error toast"
+      },
+      "layout": "Top: User details and Target Calculator (weight/activity inputs). Middle: Separated soft cards for unit preferences (ml/liter), app theme, and the CSV Export action button. Single-column list layout with md gaps."
+    }
+  ],
+  "images": {
+    "auth_background": {
+      "url": "https://images.unsplash.com/photo-1645811791231-279658fb46dc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwYXF1YSUyMGJsdWUlMjBncmFkaWVudCUyMHRleHR1cmV8ZW58MHx8fHwxNzkwOTE2ODA2fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Soft minimal aqua blue abstract gradient"
+    },
+    "home_empty_state": {
+      "url": "https://images.unsplash.com/photo-1534616042650-80f5c9b61f09?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxnbGFzcyUyMG9mJTIwd2F0ZXIlMjBmcmVzaCUyMHN1bmxpZ2h0JTIwbWluaW1hbHxlbnwwfHx8fDE3OTA5MTY4MDZ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Clean drinking glass filled with water in fresh sunlight"
+    },
+    "reports_hero_backdrop": {
+      "url": "https://images.unsplash.com/photo-1612623753207-96465febeee7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMGFic3RyYWN0JTIwd2F0ZXIlMjBzcGxhc2glMjBhcXVhJTIwbWluaW1hbHxlbnwwfHx8fDE3OTA5MTY4MDZ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract water splash waves on a dark background, heavily tinted for contrast"
+    }
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: The prompt specifically requested 'fresh & minimal aqua/blue', which overrides the global blue/navy ban. Stick exactly to the provided cyan/aqua/sky-blue palette.",
+    "Implement the home screen with a large, central circular progress ring for the daily target. It should visually anchor the screen.",
+    "Use horizontal scroll views for the quick-add buttons (e.g., +100ml, +250ml) styled as large, touchable pills.",
+    "Ensure all cards have soft rounding (lg radius = 20) to match the tactile/playful personality, but maintain a clean, uncluttered layout so it feels minimal.",
+    "For the Reports screen, build a 'bento box' layout. The monthly calendar should be a dot-grid/heatmap where color intensity signifies achievement level.",
+    "Ensure haptics are wired to all quick-add buttons and toggles to make the app feel responsive and physical.",
+    "Do not use generic 'AI' icons; use Phosphor icons with rounded/filled variants that align with the soft aesthetic.",
+    "Always place a gradient scrim layer between images and text (e.g., on the Auth background screen) to maintain a >= 4.5:1 contrast ratio."
+  ]
+}
