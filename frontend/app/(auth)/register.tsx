@@ -6,6 +6,7 @@ import { AuthShell } from "@/src/components/AuthShell";
 import { Button, Field } from "@/src/components/ui";
 import { useAuth } from "@/src/context/auth";
 import { useToast } from "@/src/context/toast";
+import { useI18n } from "@/src/i18n";
 import { fonts, fontSize, makeStyles, spacing } from "@/src/theme";
 import { ApiError } from "@/src/api/client";
 
@@ -14,6 +15,7 @@ export default function Register() {
   const router = useRouter();
   const { register } = useAuth();
   const toast = useToast();
+  const { t } = useI18n();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,11 +25,11 @@ export default function Register() {
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!name.trim()) e.name = "Name is required";
-    if (!email.trim()) e.email = "Email is required";
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) e.email = "Enter a valid email";
-    if (!password) e.password = "Password is required";
-    else if (password.length < 6) e.password = "Use at least 6 characters";
+    if (!name.trim()) e.name = t("auth.nameRequired");
+    if (!email.trim()) e.email = t("auth.emailRequired");
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) e.email = t("auth.emailInvalid");
+    if (!password) e.password = t("auth.passwordRequired");
+    else if (password.length < 6) e.password = t("auth.passwordMin");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -37,10 +39,10 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email.trim().toLowerCase(), password, name.trim());
-      toast.show("Account created! Let's set you up 💧", "success");
+      toast.show(t("auth.accountCreated"), "success");
       router.replace("/onboarding");
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Could not create account";
+      const msg = err instanceof ApiError ? err.message : t("auth.couldNotCreate");
       toast.show(msg, "error");
     } finally {
       setLoading(false);
@@ -48,42 +50,42 @@ export default function Register() {
   };
 
   return (
-    <AuthShell title="Create account" subtitle="Start building a healthy hydration habit">
+    <AuthShell title={t("auth.registerTitle")} subtitle={t("auth.registerSubtitle")}>
       <Field
-        label="Name"
+        label={t("auth.name")}
         testID="register-name-input"
         value={name}
         onChangeText={setName}
         error={errors.name}
-        placeholder="Your name"
+        placeholder={t("auth.namePlaceholder")}
       />
       <Field
-        label="Email"
+        label={t("auth.email")}
         testID="register-email-input"
         value={email}
         onChangeText={setEmail}
         error={errors.email}
         autoCapitalize="none"
         keyboardType="email-address"
-        placeholder="you@example.com"
+        placeholder={t("auth.emailPlaceholder")}
       />
       <Field
-        label="Password"
+        label={t("auth.password")}
         testID="register-password-input"
         value={password}
         onChangeText={setPassword}
         error={errors.password}
         secureTextEntry
-        placeholder="At least 6 characters"
+        placeholder={t("auth.passwordMin")}
       />
 
-      <Button title="Create account" onPress={onRegister} loading={loading} testID="register-submit-button" />
+      <Button title={t("auth.registerButton")} onPress={onRegister} loading={loading} testID="register-submit-button" />
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Text style={styles.footerText}>{t("auth.haveAccount")}</Text>
         <Link href="/(auth)/login" asChild>
           <Pressable testID="go-to-login-link">
-            <Text style={styles.footerLink}>Sign in</Text>
+            <Text style={styles.footerLink}>{t("auth.signIn")}</Text>
           </Pressable>
         </Link>
       </View>

@@ -1,0 +1,29 @@
+{
+  "summary": "Full regression of the new language feature (en/id/ja) across backend + frontend. Backend: 8/8 language tests pass — GET /api/profile defaults to language='en' for fresh users; PUT /api/profile {language:'ja'} and {language:'id'} both 200 and round-trip through GET; PUT {language:'fr'} (and 'EN','','de','zh','english') all 422 'Unsupported language'. email_service.RESET_COPY exposes en/id/ja with all six template keys (subject/hi/hi_anon/body/ignore/footer). Code-path check confirms /auth/forgot-password reads profile.language and forwards it as lang= to send_password_reset_email (no live email sent — rate limit 3/15min). Demo user restored to language='en' at test end (verified via API). Frontend (390x844 web preview): logged in demo@hibinomi.app/water123; Settings 'Language' card renders language-en/language-id/language-ja radios. Switching to id: toast 'Bahasa diperbarui' appears, header becomes 'Pengaturan', tabs flip to Beranda/Laporan/Pengingat/Profil. Home shows 'Tambah cepat', 'Catatan hari ini', date subtitle 'Min, 4 Okt'. quick-add-100 fires toast 'Ditambahkan 100 ml 💧'; the created row deletes via edit sheet 'Ubah catatan' -> 'Hapus catatan' with toast 'Catatan dihapus'. Reports shows 'Minggu ini'/'Bulanan', month label 'Oktober 2026', weekday initials M S S R K J S. Reminders shows 'Pengingat minum', chips '30 mnt','1 jam'. Profile shows 'Target harian','Keluar'. Switching to ja: Home 'クイック追加','今日の記録','目標 2000 ml', date '10月4日'; Reports '今週', month '2026年10月'; Reminders in 24h (07:00 / 23:00, no AM/PM); tabs ホーム/レポート/リマインダー/プロフィール. Reloading the page keeps the UI in Japanese (AsyncStorage + profile sync), logging out shows login screen with 'おかえりなさい', and logging back in stays Japanese. Presets sheet in ja: title 'クイック追加のプリセット', count '5/6 件'. Forgot-password screen in id: title 'Atur ulang kata sandi' (no submit — honored rate limit). Final language-en tap produced 'Language updated' toast and 'Settings' English header. Everything green; no regressions found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_language_feature.py",
+    "/app/test_reports/pytest/pytest_language.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L596-597 rejects any language not in LANGUAGES={'en','id','ja'} with 422 — good, but Pydantic field_validator on ProfileIn.language would centralise this with request-level validation (currently per-endpoint). Not a bug — just DRY opportunity.",
+    "email_service.py RESET_COPY is a module-level dict with no runtime validation that all three locales share the same keys; if a future locale is added and misses 'hi_anon', the reset email helper will KeyError. Consider a cheap startup assertion `assert all(set(v)=={expected keys}) for v in RESET_COPY.values()` or a Pydantic model.",
+    "i18n/index.tsx keeps a module-level `currentLang` singleton for non-React helpers (date, notifications). This works but is a global — if two providers were ever mounted (unlikely in Expo Router) they would race. Fine for a single-root app."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_language_feature.py (new regression suite)"
+  ],
+  "success_rate": {"backend": "100% (8/8 language tests)", "frontend": "100% (every spec checkpoint passed)"},
+  "seed_data_creation": "No persistent seed. test_language_feature.py registers a one-off TEST_<uuid>@hibinomi.app user to verify the 'en' default; demo@hibinomi.app profile is round-tripped through id/ja then restored to 'en' as required. Any intake row created by the UI toast test was deleted via the edit sheet in the same flow.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The i18n layer persists in two places: AsyncStorage key 'language' (frontend) and user_profiles.language (backend). After login the profile value wins. If a browser session is already logged-in with a non-en language (persistent web storage), new UI tests should either localStorage.clear() first or detect the current language before clicking tab labels. Tab labels on web preview are rendered as plain text nodes, so get_by_text(label, exact=True).last.click(force=True) is the reliable selector (there are duplicates — use last/reversed). Forgot-password remains rate-limited to 3/email/15min and 10/ip/15min — tests only READ the file to assert the lang= argument wiring (test_forgot_password_uses_profile_language) instead of POSTing.",
+  "rca_of_issue": "N/A — feature verified end-to-end, no bugs surfaced."
+}

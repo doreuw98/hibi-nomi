@@ -39,8 +39,15 @@ Build HIBI NOMI, a personal daily water-intake tracking mobile app (React Native
 - [x] Custom quick-add presets: `quick_presets` on profile — list of `{amount_ml, icon}` (1–6 unique, 1–5000 ml, sorted; icons: glass/mug/bottle/drop/wine/jar; legacy int lists auto-migrated in `normalize_presets`). Editable via `PresetsSheet` (icon picker + chip select) from Home and Settings. Shared model in `src/lib/presets.ts`.
 
 ## Backlog / Remaining
-- P2: Dark theme; weekly pattern analysis (morning/afternoon) richer insights.
+- P2: Weekly pattern analysis (morning/afternoon) richer insights.
 - P2: Streaks / achievements gamification.
+
+## Theme
+- Light + dark palettes in `frontend/src/theme.ts`; `ThemeProvider` (`src/context/theme.tsx`) resolves preference System/Light/Dark (storage key `theme`, device-local) and exposes `useTheme()`. Status bar follows scheme. Settings → Theme segment.
+
+## Localization
+- Languages: English (default), Indonesian, Japanese. Dictionaries in `frontend/src/i18n/{en,id,ja}.ts`, provider + `t()/tArray()` in `src/i18n/index.tsx`. Stored locally (storage key `language`) and on profile (`language`, PUT /api/profile). Account language overrides device default on login (tabs layout effect).
+- Locale-aware dates/time (`src/lib/datetime.ts`), notification bodies, and reset email (`RESET_COPY` in email_service.py) are translated.
 
 ## Security (audit June 2026)
 - Password reset codes are emailed via Emergent-managed Resend (`backend/email_service.py`); API never returns the code. 8-char code, 15-min expiry, single-use; reset revokes all sessions.

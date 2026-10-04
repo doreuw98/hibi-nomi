@@ -4,10 +4,11 @@
 // with makeStyles((colors) => ...) and read useTheme().colors for color props.
 // spacing / radius / fonts are static tokens shared across the app.
 
-import { useMemo } from "react";
-import { Appearance, StyleSheet, useColorScheme } from "react-native";
+import { createContext, useContext, useMemo } from "react";
+import { StyleSheet } from "react-native";
 
 export type ColorScheme = "light" | "dark";
+export type ThemePreference = "system" | ColorScheme;
 
 const light = {
   surface: "#F2FBFC",
@@ -43,10 +44,44 @@ const light = {
   divider: "#F1F5F9",
 };
 
+const dark: typeof light = {
+  surface: "#0B1220",
+  onSurface: "#E6F1F5",
+  surfaceSecondary: "#121D31",
+  onSurfaceSecondary: "#E6F1F5",
+  surfaceTertiary: "#1B2A44",
+  onSurfaceTertiary: "#E6F1F5",
+  surfaceInverse: "#F2FBFC",
+  onSurfaceInverse: "#0F172A",
+  muted: "#94A3B8",
+
+  brand: "#06B6D4",
+  onBrand: "#FFFFFF",
+  brandPrimary: "#22D3EE",
+  onBrandPrimary: "#062A33",
+  brandSecondary: "#38BDF8",
+  onBrandSecondary: "#062A33",
+  brandTertiary: "#164E63",
+  onBrandTertiary: "#A5F3FC",
+
+  success: "#34D399",
+  onSuccess: "#062A33",
+  warning: "#FBBF24",
+  onWarning: "#062A33",
+  error: "#F87171",
+  onError: "#FFFFFF",
+  info: "#38BDF8",
+  onInfo: "#062A33",
+
+  border: "#243352",
+  borderStrong: "#334A6B",
+  divider: "#1C2A44",
+};
+
 export type ThemeColors = typeof light;
 
 export const defaultScheme = "light" satisfies ColorScheme;
-export const themes: { light: ThemeColors; dark?: ThemeColors } = { light };
+export const themes: { light: ThemeColors; dark: ThemeColors } = { light, dark };
 
 export const spacing = {
   xs: 4,
@@ -83,16 +118,26 @@ export const fontSize = {
   "4xl": 40,
 } as const;
 
-export function setColorScheme(scheme: ColorScheme | null) {
-  Appearance.setColorScheme?.(scheme ?? "unspecified");
-}
+export type ThemeContextValue = {
+  scheme: ColorScheme;
+  colors: ThemeColors;
+  preference: ThemePreference;
+  setPreference: (p: ThemePreference) => Promise<void>;
+};
 
-setColorScheme?.(themes.dark ? null : defaultScheme);
+// Provided by src/context/theme.tsx. Falls back to light outside the provider
+// (e.g. the root error boundary).
+export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export function useTheme(): { scheme: ColorScheme; colors: ThemeColors } {
-  const system = useColorScheme();
-  const scheme: ColorScheme = system && themes[system] ? system : defaultScheme;
-  return { scheme, colors: themes[scheme] ?? themes.light };
+const fallback: ThemeContextValue = {
+  scheme: defaultScheme,
+  colors: themes[defaultScheme],
+  preference: "system",
+  setPreference: async () => {},
+};
+
+export function useTheme(): ThemeContextValue {
+  return useContext(ThemeContext) ?? fallback;
 }
 
 export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(

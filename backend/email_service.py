@@ -125,21 +125,49 @@ async def send_email(*, to: str, subject: str, html: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Templates (fixed, server-side)
 # ---------------------------------------------------------------------------
-async def send_password_reset_email(*, to: str, name: str | None, code: str, minutes: int) -> None:
-    brand = escape(EMAIL_FROM_NAME)
-    greeting = f"Hi {escape(name)}," if name else "Hi,"
-    subject = f"Your {EMAIL_FROM_NAME} password reset code"
+RESET_COPY = {
+    "en": {
+        "subject": "Your {brand} password reset code",
+        "hi": "Hi {name},",
+        "hi_anon": "Hi,",
+        "body": "Use this code in the {brand} app to set a new password. It expires in {minutes} minutes.",
+        "ignore": "If you didn't request this, you can safely ignore this email — your password won't change.",
+        "footer": "Sent by {brand}. We will never ask you for your password by email.",
+    },
+    "id": {
+        "subject": "Kode reset kata sandi {brand} kamu",
+        "hi": "Halo {name},",
+        "hi_anon": "Halo,",
+        "body": "Gunakan kode ini di aplikasi {brand} untuk membuat kata sandi baru. Kode berlaku selama {minutes} menit.",
+        "ignore": "Jika kamu tidak meminta ini, abaikan saja email ini — kata sandimu tidak akan berubah.",
+        "footer": "Dikirim oleh {brand}. Kami tidak akan pernah meminta kata sandimu lewat email.",
+    },
+    "ja": {
+        "subject": "{brand} パスワード再設定コード",
+        "hi": "{name} さん、こんにちは。",
+        "hi_anon": "こんにちは。",
+        "body": "{brand} アプリでこのコードを入力して新しいパスワードを設定してください。有効期限は{minutes}分です。",
+        "ignore": "心当たりがない場合は、このメールを無視してください。パスワードは変更されません。",
+        "footer": "{brand} より送信。メールでパスワードをお尋ねすることは決してありません。",
+    },
+}
+
+
+async def send_password_reset_email(*, to: str, name: str | None, code: str, minutes: int, lang: str = "en") -> None:
+    copy = RESET_COPY.get(lang, RESET_COPY["en"])
+    greeting = escape(copy["hi"].format(name=name)) if name else copy["hi_anon"]
+    subject = copy["subject"].format(brand=EMAIL_FROM_NAME)
+    body = escape(copy["body"].format(brand=EMAIL_FROM_NAME, minutes=minutes))
+    footer = escape(copy["footer"].format(brand=EMAIL_FROM_NAME))
     html = (
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
         '<tr><td style="padding:24px;font-family:Arial,Helvetica,sans-serif;color:#0F172A">'
         f'<p style="font-size:16px;margin:0 0 12px">{greeting}</p>'
-        f'<p style="font-size:16px;margin:0 0 20px">Use this code in the {brand} app to set a new password. '
-        f'It expires in {minutes} minutes.</p>'
+        f'<p style="font-size:16px;margin:0 0 20px">{body}</p>'
         '<p style="font-size:30px;font-weight:bold;letter-spacing:4px;margin:0 0 20px;color:#0891B2">'
         f'{escape(code)}</p>'
-        '<p style="font-size:14px;color:#475569;margin:0 0 20px">If you didn\'t request this, you can safely ignore this email — '
-        'your password won\'t change.</p>'
-        f'<p style="font-size:12px;color:#94A3B8;margin:0">Sent by {brand}. We will never ask you for your password by email.</p>'
+        f'<p style="font-size:14px;color:#475569;margin:0 0 20px">{escape(copy["ignore"])}</p>'
+        f'<p style="font-size:12px;color:#94A3B8;margin:0">{footer}</p>'
         '</td></tr></table>'
     )
     await send_email(to=to, subject=subject, html=html)

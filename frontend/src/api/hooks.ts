@@ -15,6 +15,7 @@ export type Profile = {
   daily_target: number;
   onboarded: boolean;
   quick_presets: { amount_ml: number; icon: string }[];
+  language: "en" | "id" | "ja";
 };
 
 export type Intake = {

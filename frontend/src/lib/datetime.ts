@@ -28,30 +28,30 @@ export function addDays(dateStr: string, n: number): string {
   return localDateString(d);
 }
 
-const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import { t, tArray } from "@/src/i18n";
 
 export function shortDayName(dateStr: string): string {
-  return DOW[new Date(dateStr + "T00:00:00").getDay()];
+  return tArray("date.days")[new Date(dateStr + "T00:00:00").getDay()];
 }
 
 export function prettyDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return `${DOW[d.getDay()]}, ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
+  return t("date.pretty", {
+    dow: tArray("date.days")[d.getDay()],
+    mon: tArray("date.monthsShort")[d.getMonth()],
+    d: d.getDate(),
+  });
 }
 
 export function prettyFullDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return t("date.full", { month: tArray("date.months")[d.getMonth()], d: d.getDate(), y: d.getFullYear() });
 }
 
 export function monthLabel(monthStr: string): string {
   const y = parseInt(monthStr.slice(0, 4), 10);
   const m = parseInt(monthStr.slice(5, 7), 10) - 1;
-  return `${MONTHS[m]} ${y}`;
+  return t("date.month", { month: tArray("date.months")[m], y });
 }
 
 export function addMonths(monthStr: string, n: number): string {
@@ -72,9 +72,8 @@ export function timeOfISO(iso?: string | null): string {
 export function timeTo12h(hhmm: string): string {
   if (!hhmm || hhmm.length < 4) return hhmm;
   const [h, m] = hhmm.split(":").map((x) => parseInt(x, 10));
+  if (t("date.time24") === "yes") return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
-
-export const MONTH_NAMES = MONTHS;

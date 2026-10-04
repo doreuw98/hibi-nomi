@@ -13,14 +13,17 @@ import { ErrorBoundary } from "@/src/components/error-boundary";
 import { queryClient } from "@/src/query-client";
 import { AuthProvider, useAuth } from "@/src/context/auth";
 import { ToastProvider } from "@/src/context/toast";
-import { themes } from "@/src/theme";
+import { I18nProvider } from "@/src/i18n";
+import { ThemeProvider } from "@/src/context/theme";
+import { useTheme } from "@/src/theme";
 
 LogBox.ignoreAllLogs(true);
 
 function Splash() {
+  const { colors } = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: themes.light.surface }}>
-      <ActivityIndicator size="large" color={themes.light.brandPrimary} />
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}>
+      <ActivityIndicator size="large" color={colors.brandPrimary} />
     </View>
   );
 }
@@ -29,6 +32,7 @@ function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (loading) return;
@@ -43,7 +47,7 @@ function RootNavigator() {
   if (loading) return <Splash />;
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: themes.light.surface } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
@@ -53,6 +57,11 @@ function RootNavigator() {
       <Stack.Screen name="day-graph" options={{ presentation: "card" }} />
     </Stack>
   );
+}
+
+function ThemedStatusBar() {
+  const { scheme } = useTheme();
+  return <StatusBar style={scheme === "dark" ? "light" : "dark"} />;
 }
 
 export default function RootLayout() {
@@ -69,12 +78,16 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <KeyboardProvider>
-              <AuthProvider>
-                <ToastProvider>
-                  <StatusBar style="dark" />
-                  {fontsLoaded ? <RootNavigator /> : <Splash />}
-                </ToastProvider>
-              </AuthProvider>
+              <ThemeProvider>
+                <I18nProvider>
+                  <AuthProvider>
+                    <ToastProvider>
+                      <ThemedStatusBar />
+                      {fontsLoaded ? <RootNavigator /> : <Splash />}
+                    </ToastProvider>
+                  </AuthProvider>
+                </I18nProvider>
+              </ThemeProvider>
             </KeyboardProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

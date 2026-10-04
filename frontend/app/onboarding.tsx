@@ -10,7 +10,8 @@ import { TimeField } from "@/src/components/TimeField";
 import { Button, Card, Field, SectionTitle } from "@/src/components/ui";
 import { useToast } from "@/src/context/toast";
 import { useUpdateProfile } from "@/src/api/hooks";
-import { ACTIVITY_OPTIONS, calculateTarget } from "@/src/lib/target";
+import { ACTIVITY_LEVELS, calculateTarget } from "@/src/lib/target";
+import { useI18n } from "@/src/i18n";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 export default function Onboarding() {
@@ -19,6 +20,7 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { t } = useI18n();
   const updateProfile = useUpdateProfile();
 
   const [weight, setWeight] = useState("");
@@ -39,10 +41,10 @@ export default function Onboarding() {
         target_mode: "auto",
         onboarded: true,
       } as any);
-      toast.show("You're all set! 💧", "success");
+      toast.show(t("onboarding.allSet"), "success");
       router.replace("/(tabs)");
     } catch {
-      toast.show("Could not save profile", "error");
+      toast.show(t("onboarding.saveError"), "error");
     }
   };
 
@@ -55,7 +57,7 @@ export default function Onboarding() {
 
   return (
     <View style={styles.root}>
-      <StackHeader title="Set up your target" />
+      <StackHeader title={t("onboarding.title")} />
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         keyboardShouldPersistTaps="handled"
@@ -65,49 +67,49 @@ export default function Onboarding() {
           <View style={styles.previewIcon}>
             <Drop size={28} color={colors.onBrandPrimary} weight="fill" />
           </View>
-          <Text style={styles.previewLabel}>Recommended daily target</Text>
+          <Text style={styles.previewLabel}>{t("onboarding.recommended")}</Text>
           <Text style={styles.previewValue} testID="onboarding-target-preview">
             {preview} ml
           </Text>
-          <Text style={styles.previewHint}>Based on your weight & activity. You can change this anytime.</Text>
+          <Text style={styles.previewHint}>{t("onboarding.basedOn")}</Text>
         </Card>
 
-        <SectionTitle style={{ marginTop: spacing.lg }}>Your details</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("target.yourDetails")}</SectionTitle>
         <Field
-          label="Weight (kg)"
+          label={t("target.weightKg")}
           testID="onboarding-weight-input"
           value={weight}
           onChangeText={setWeight}
           keyboardType="decimal-pad"
-          placeholder="e.g. 65"
+          placeholder={t("target.weightPlaceholder")}
         />
 
-        <Text style={styles.fieldLabel}>Activity level</Text>
+        <Text style={styles.fieldLabel}>{t("target.activityLevel")}</Text>
         <View style={styles.chips}>
-          {ACTIVITY_OPTIONS.map((opt) => {
-            const active = activity === opt.value;
+          {ACTIVITY_LEVELS.map((lvl) => {
+            const active = activity === lvl;
             return (
               <Pressable
-                key={opt.value}
+                key={lvl}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setActivity(opt.value)}
-                testID={`activity-${opt.value}`}
+                onPress={() => setActivity(lvl)}
+                testID={`activity-${lvl}`}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(`activity.${lvl}` as const)}</Text>
               </Pressable>
             );
           })}
         </View>
 
-        <SectionTitle style={{ marginTop: spacing.lg }}>Daily schedule</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("target.dailySchedule")}</SectionTitle>
         <View style={styles.timeRow}>
-          <TimeField label="Wake up" value={wake} onChange={setWake} testID="onboarding-wake-time" />
-          <TimeField label="Sleep" value={sleep} onChange={setSleep} testID="onboarding-sleep-time" />
+          <TimeField label={t("profile.wakeUp")} value={wake} onChange={setWake} testID="onboarding-wake-time" />
+          <TimeField label={t("profile.sleep")} value={sleep} onChange={setSleep} testID="onboarding-sleep-time" />
         </View>
 
-        <Button title="Start tracking" onPress={finish} loading={updateProfile.isPending} testID="onboarding-finish-button" style={{ marginTop: spacing.xl }} />
+        <Button title={t("onboarding.start")} onPress={finish} loading={updateProfile.isPending} testID="onboarding-finish-button" style={{ marginTop: spacing.xl }} />
         <Pressable style={styles.skip} onPress={skip} testID="onboarding-skip-button">
-          <Text style={styles.skipText}>Skip for now</Text>
+          <Text style={styles.skipText}>{t("onboarding.skip")}</Text>
         </Pressable>
       </KeyboardAwareScrollView>
     </View>

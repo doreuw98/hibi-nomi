@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Drop } from "phosphor-react-native";
 
+import { useI18n } from "@/src/i18n";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 export function AuthShell({
@@ -19,6 +20,7 @@ export function AuthShell({
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
 
   return (
     <View style={styles.root}>
@@ -38,7 +40,7 @@ export function AuthShell({
             <Drop size={34} color={colors.brandPrimary} weight="fill" />
           </View>
           <Text style={styles.brandName}>HIBI NOMI</Text>
-          <Text style={styles.brandTag}>Your daily hydration habit</Text>
+          <Text style={styles.brandTag}>{t("auth.brandTag")}</Text>
         </View>
 
         <View style={[styles.card, { paddingBottom: insets.bottom + spacing.xl }]}>

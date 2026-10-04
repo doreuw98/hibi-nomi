@@ -19,6 +19,7 @@ import { Sheet } from "@/src/components/Sheet";
 import { PresetsSheet } from "@/src/components/PresetsSheet";
 import { DEFAULT_PRESETS, iconFor, type Preset } from "@/src/lib/presets";
 import { useToast } from "@/src/context/toast";
+import { useI18n } from "@/src/i18n";
 import {
   useAddIntake,
   useDay,
@@ -37,6 +38,7 @@ export default function Home() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { t } = useI18n();
   const today = localDateString();
 
   const { data: profile } = useProfile();
@@ -66,30 +68,30 @@ export default function Home() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     try {
       await addIntake.mutateAsync({ amount_ml: ml });
-      toast.show(`Added ${formatVolume(ml, unit)} 💧`, "success");
+      toast.show(t("home.added", { amount: formatVolume(ml, unit) }), "success");
     } catch {
-      toast.show("Could not save. Try again.", "error");
+      toast.show(t("home.saveError"), "error");
     }
   };
 
   const submitCustom = async () => {
     const parsed = parseFloat(customAmount);
     if (isNaN(parsed) || parsed <= 0) {
-      toast.show("Enter a valid amount", "error");
+      toast.show(t("home.enterValidAmount"), "error");
       return;
     }
     const ml = unit === "l" ? Math.round(parsed * 1000) : Math.round(parsed);
     if (ml > 5000) {
-      toast.show("That's a bit much — max 5000 ml at once", "error");
+      toast.show(t("home.tooMuch"), "error");
       return;
     }
     try {
       await addIntake.mutateAsync({ amount_ml: ml });
-      toast.show(`Added ${formatVolume(ml, unit)} 💧`, "success");
+      toast.show(t("home.added", { amount: formatVolume(ml, unit) }), "success");
       setCustomAmount("");
       setCustomOpen(false);
     } catch {
-      toast.show("Could not save. Try again.", "error");
+      toast.show(t("home.saveError"), "error");
     }
   };
 
@@ -102,16 +104,16 @@ export default function Home() {
     if (!editing) return;
     const parsed = parseFloat(editAmount);
     if (isNaN(parsed) || parsed <= 0) {
-      toast.show("Enter a valid amount", "error");
+      toast.show(t("home.enterValidAmount"), "error");
       return;
     }
     const ml = unit === "l" ? Math.round(parsed * 1000) : Math.round(parsed);
     try {
       await updateIntake.mutateAsync({ id: editing.id, amount_ml: ml });
-      toast.show("Record updated", "success");
+      toast.show(t("home.recordUpdated"), "success");
       setEditing(null);
     } catch {
-      toast.show("Could not update", "error");
+      toast.show(t("home.updateError"), "error");
     }
   };
 
@@ -119,10 +121,10 @@ export default function Home() {
     if (!editing) return;
     try {
       await deleteIntake.mutateAsync(editing.id);
-      toast.show("Record deleted", "info");
+      toast.show(t("home.recordDeleted"), "info");
       setEditing(null);
     } catch {
-      toast.show("Could not delete", "error");
+      toast.show(t("home.deleteError"), "error");
     }
   };
 
@@ -144,7 +146,7 @@ export default function Home() {
             </Text>
             <Text style={styles.ringUnit}>{unitLabel(unit)}</Text>
             <Text style={styles.ringTarget} testID="home-target-value">
-              of {formatVolume(target, unit)}
+              {t("home.of", { target: formatVolume(target, unit) })}
             </Text>
           </CircularProgress>
 
@@ -153,21 +155,21 @@ export default function Home() {
               <Text style={[styles.statValue, { color: colors.brandPrimary }]} testID="home-progress-value">
                 {progress}%
               </Text>
-              <Text style={styles.statLabel}>Progress</Text>
+              <Text style={styles.statLabel}>{t("home.progress")}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={[styles.statValue, { color: colors.info }]} testID="home-remaining-value">
                 {formatVolume(remaining, unit)}
               </Text>
-              <Text style={styles.statLabel}>Remaining</Text>
+              <Text style={styles.statLabel}>{t("home.remaining")}</Text>
             </View>
           </View>
         </Animated.View>
 
         {/* Quick add */}
         <View style={styles.quickHead}>
-          <SectionTitle style={{ marginBottom: 0 }}>Quick add</SectionTitle>
+          <SectionTitle style={{ marginBottom: 0 }}>{t("home.quickAdd")}</SectionTitle>
           <Pressable
             onPress={() => setPresetsOpen(true)}
             hitSlop={8}
@@ -175,7 +177,7 @@ export default function Home() {
             testID="edit-presets-button"
           >
             <PencilSimple size={16} color={colors.brandPrimary} weight="bold" />
-            <Text style={styles.editPresetsText}>Edit</Text>
+            <Text style={styles.editPresetsText}>{t("home.edit")}</Text>
           </Pressable>
         </View>
         <ScrollView
@@ -203,13 +205,13 @@ export default function Home() {
             testID="quick-add-custom"
           >
             <Plus size={20} color={colors.brandPrimary} weight="bold" />
-            <Text style={styles.pillCustomText}>Custom</Text>
+            <Text style={styles.pillCustomText}>{t("home.custom")}</Text>
           </Pressable>
         </ScrollView>
 
         {/* History */}
         <View style={styles.historyHead}>
-          <SectionTitle style={{ marginBottom: 0 }}>Today's log</SectionTitle>
+          <SectionTitle style={{ marginBottom: 0 }}>{t("home.todaysLog")}</SectionTitle>
           {addIntake.isPending ? <ActivityIndicator color={colors.brandPrimary} /> : null}
         </View>
 
@@ -220,14 +222,14 @@ export default function Home() {
             </View>
           ) : isError ? (
             <View style={styles.center}>
-              <Text style={styles.errorText}>Couldn't load today's data.</Text>
-              <Button title="Retry" variant="secondary" onPress={() => refetch()} testID="home-retry-button" />
+              <Text style={styles.errorText}>{t("home.loadError")}</Text>
+              <Button title={t("home.retry")} variant="secondary" onPress={() => refetch()} testID="home-retry-button" />
             </View>
           ) : records.length === 0 ? (
             <EmptyState
               icon={<Drop size={44} color={colors.brandSecondary} weight="duotone" />}
-              title="No water logged yet today"
-              subtitle="Tap a quick-add button above to record your first drink."
+              title={t("home.noWaterTitle")}
+              subtitle={t("home.noWaterSubtitle")}
               testID="home-empty-state"
             />
           ) : (
@@ -256,30 +258,30 @@ export default function Home() {
       <PresetsSheet visible={presetsOpen} onClose={() => setPresetsOpen(false)} presets={presets} unit={unit} />
 
       {/* Custom amount sheet */}
-      <Sheet visible={customOpen} onClose={() => setCustomOpen(false)} title="Add custom amount" testID="custom-amount-sheet">
+      <Sheet visible={customOpen} onClose={() => setCustomOpen(false)} title={t("home.customSheetTitle")} testID="custom-amount-sheet">
         <Field
-          label={`Amount (${unitLabel(unit)})`}
+          label={t("home.amount", { unit: unitLabel(unit) })}
           testID="custom-amount-input"
           value={customAmount}
           onChangeText={setCustomAmount}
           keyboardType="decimal-pad"
-          placeholder={unit === "l" ? "e.g. 0.35" : "e.g. 350"}
+          placeholder={unit === "l" ? t("home.amountPlaceholderL") : t("home.amountPlaceholderMl")}
         />
-        <Button title="Add water" onPress={submitCustom} loading={addIntake.isPending} testID="custom-amount-submit" />
+        <Button title={t("home.addWater")} onPress={submitCustom} loading={addIntake.isPending} testID="custom-amount-submit" />
       </Sheet>
 
       {/* Edit / delete sheet */}
-      <Sheet visible={!!editing} onClose={() => setEditing(null)} title="Edit record" testID="edit-record-sheet">
+      <Sheet visible={!!editing} onClose={() => setEditing(null)} title={t("home.editRecord")} testID="edit-record-sheet">
         <Field
-          label={`Amount (${unitLabel(unit)})`}
+          label={t("home.amount", { unit: unitLabel(unit) })}
           testID="edit-amount-input"
           value={editAmount}
           onChangeText={setEditAmount}
           keyboardType="decimal-pad"
         />
-        <Button title="Save changes" onPress={saveEdit} loading={updateIntake.isPending} testID="edit-save-button" />
+        <Button title={t("home.saveChanges")} onPress={saveEdit} loading={updateIntake.isPending} testID="edit-save-button" />
         <Button
-          title="Delete record"
+          title={t("home.deleteRecord")}
           variant="danger"
           icon={<Trash size={18} color="#fff" weight="bold" />}
           onPress={removeRecord}

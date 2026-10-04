@@ -7,6 +7,7 @@ import { StackHeader } from "@/src/components/StackHeader";
 import { DailyChart } from "@/src/components/DailyChart";
 import { Card, EmptyState } from "@/src/components/ui";
 import { useDay, useProfile } from "@/src/api/hooks";
+import { useI18n } from "@/src/i18n";
 import { addDays, localDateString, prettyFullDate, timeOfISO } from "@/src/lib/datetime";
 import { formatVolume, type Unit } from "@/src/lib/format";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -15,6 +16,7 @@ export default function DayGraph() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const today = localDateString();
 
   const [date, setDate] = useState(today);
@@ -27,7 +29,7 @@ export default function DayGraph() {
 
   return (
     <View style={styles.root}>
-      <StackHeader title="Daily graph" />
+      <StackHeader title={t("day.title")} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
@@ -38,7 +40,7 @@ export default function DayGraph() {
             <CaretLeft size={22} color={colors.onSurface} weight="bold" />
           </Pressable>
           <Text style={styles.navLabel} testID="day-label">
-            {isToday ? "Today" : prettyFullDate(date)}
+            {isToday ? t("day.today") : prettyFullDate(date)}
           </Text>
           <Pressable
             style={styles.navBtn}
@@ -60,8 +62,8 @@ export default function DayGraph() {
           ) : records.length === 0 ? (
             <EmptyState
               icon={<Drop size={44} color={colors.brandSecondary} weight="duotone" />}
-              title={isToday ? "No water intake recorded yet today." : "No data for this day."}
-              subtitle="Cumulative intake will appear here once you log water."
+              title={isToday ? t("day.noDataToday") : t("day.noDataDay")}
+              subtitle={t("day.cumulativeHint")}
               testID="day-graph-empty"
             />
           ) : (
@@ -69,15 +71,15 @@ export default function DayGraph() {
               <View style={styles.summary}>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryValue}>{formatVolume(day!.total, unit)}</Text>
-                  <Text style={styles.summaryLabel}>Consumed</Text>
+                  <Text style={styles.summaryLabel}>{t("day.consumed")}</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryValue}>{formatVolume(day!.target, unit)}</Text>
-                  <Text style={styles.summaryLabel}>Target</Text>
+                  <Text style={styles.summaryLabel}>{t("day.target")}</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryValue, { color: colors.brandPrimary }]}>{day!.progress}%</Text>
-                  <Text style={styles.summaryLabel}>Progress</Text>
+                  <Text style={styles.summaryLabel}>{t("day.progress")}</Text>
                 </View>
               </View>
               <DailyChart records={records} target={day!.target} />
@@ -87,7 +89,7 @@ export default function DayGraph() {
 
         {records.length > 0 ? (
           <Card style={{ marginTop: spacing.md }}>
-            <Text style={styles.logTitle}>Intake log</Text>
+            <Text style={styles.logTitle}>{t("day.intakeLog")}</Text>
             {records.map((rec, idx) => (
               <View key={rec.id} style={[styles.logRow, idx > 0 && styles.logBorder]}>
                 <Text style={styles.logTime}>{timeOfISO(rec.consumed_at) || "—"}</Text>

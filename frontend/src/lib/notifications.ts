@@ -1,6 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import { tArray } from "@/src/i18n";
+
 export type ReminderSettings = {
   enabled: boolean;
   interval_minutes: number;
@@ -17,13 +19,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
-
-const MESSAGES = [
-  "Time to drink some water 💧",
-  "Stay fresh — sip some water 💧",
-  "A little water goes a long way 💧",
-  "Hydration check! Grab a glass 💧",
-];
 
 export async function getPermissionStatus() {
   if (Platform.OS === "web") return { granted: false, canAskAgain: false };
@@ -75,12 +70,13 @@ export async function rescheduleReminders(settings: ReminderSettings): Promise<n
   if (paused) return 0;
 
   const slots = buildSlots(settings);
+  const messages = tArray("notif.messages");
   let count = 0;
   for (const slot of slots) {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "HIBI NOMI",
-        body: MESSAGES[count % MESSAGES.length],
+        body: messages[count % messages.length],
         sound: true,
       },
       trigger: {

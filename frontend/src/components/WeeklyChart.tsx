@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
+import { useI18n } from "@/src/i18n";
 
 export type WeekDay = { date: string; total: number; target: number; achieved: boolean };
 
@@ -15,6 +16,7 @@ type Props = {
 export function WeeklyChart({ days, labels, onSelect }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const target = days[0]?.target || 2000;
   const maxVal = Math.max(target, ...days.map((d) => d.total), 1);
   const chartHeight = 140;
@@ -54,15 +56,15 @@ export function WeeklyChart({ days, labels, onSelect }: Props) {
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.dot, { backgroundColor: colors.success }]} />
-          <Text style={styles.legendText}>Target met</Text>
+          <Text style={styles.legendText}>{t("reports.targetMet")}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.dot, { backgroundColor: colors.brandSecondary }]} />
-          <Text style={styles.legendText}>Below target</Text>
+          <Text style={styles.legendText}>{t("reports.belowTarget")}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={styles.dashLine} />
-          <Text style={styles.legendText}>Goal</Text>
+          <Text style={styles.legendText}>{t("reports.goal")}</Text>
         </View>
       </View>
     </View>

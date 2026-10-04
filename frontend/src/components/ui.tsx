@@ -82,7 +82,7 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "primary" || variant === "danger" ? "#fff" : colors.brandPrimary} />
+        <ActivityIndicator color={variant === "primary" ? colors.onBrandPrimary : variant === "danger" ? colors.onError : colors.brandPrimary} />
       ) : (
         <View style={styles.row}>
           {icon}

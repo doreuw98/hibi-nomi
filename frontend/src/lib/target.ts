@@ -1,12 +1,7 @@
 // Client mirror of the backend hydration target formula (for instant preview).
 // Backend remains the source of truth and recomputes on save.
-export const ACTIVITY_OPTIONS = [
-  { value: "sedentary", label: "Sedentary", hint: "Little exercise" },
-  { value: "light", label: "Light", hint: "1-2 days/week" },
-  { value: "moderate", label: "Moderate", hint: "3-4 days/week" },
-  { value: "active", label: "Active", hint: "5-6 days/week" },
-  { value: "very_active", label: "Very active", hint: "Daily training" },
-] as const;
+export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "active", "very_active"] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
 
 const BONUS: Record<string, number> = {
   sedentary: 0,

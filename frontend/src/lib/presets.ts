@@ -5,13 +5,13 @@ export type PresetIconKey = "glass" | "mug" | "bottle" | "drop" | "wine" | "jar"
 
 export type Preset = { amount_ml: number; icon: PresetIconKey };
 
-export const PRESET_ICONS: { key: PresetIconKey; label: string; Icon: Icon }[] = [
-  { key: "glass", label: "Glass", Icon: PintGlass },
-  { key: "mug", label: "Mug", Icon: Coffee },
-  { key: "bottle", label: "Bottle", Icon: BeerBottle },
-  { key: "drop", label: "Water", Icon: Drop },
-  { key: "wine", label: "Goblet", Icon: Wine },
-  { key: "jar", label: "Jug", Icon: Jar },
+export const PRESET_ICONS: { key: PresetIconKey; Icon: Icon }[] = [
+  { key: "glass", Icon: PintGlass },
+  { key: "mug", Icon: Coffee },
+  { key: "bottle", Icon: BeerBottle },
+  { key: "drop", Icon: Drop },
+  { key: "wine", Icon: Wine },
+  { key: "jar", Icon: Jar },
 ];
 
 export const MAX_PRESETS = 6;

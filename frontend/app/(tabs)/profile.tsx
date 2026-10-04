@@ -18,18 +18,11 @@ import { Card } from "@/src/components/ui";
 import { useAuth } from "@/src/context/auth";
 import { useToast } from "@/src/context/toast";
 import { useProfile } from "@/src/api/hooks";
+import { useI18n } from "@/src/i18n";
 import { formatVolume, type Unit } from "@/src/lib/format";
 import { timeTo12h } from "@/src/lib/datetime";
 import { usesNativeTabs } from "@/src/navigation";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-
-const ACTIVITY_LABELS: Record<string, string> = {
-  sedentary: "Sedentary",
-  light: "Lightly active",
-  moderate: "Moderately active",
-  active: "Active",
-  very_active: "Very active",
-};
 
 export default function Profile() {
   const styles = useStyles();
@@ -38,19 +31,20 @@ export default function Profile() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const toast = useToast();
+  const { t } = useI18n();
   const { data: profile, isLoading } = useProfile();
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
   const unit: Unit = profile?.preferred_unit || "ml";
 
   const onLogout = async () => {
     await logout();
-    toast.show("Signed out", "info");
+    toast.show(t("profile.signedOut"), "info");
   };
 
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <ScreenHeader title="Profile" subtitle="Your account & hydration setup" />
+        <ScreenHeader title={t("profile.title")} subtitle={t("profile.subtitle")} />
       </View>
 
       <ScrollView
@@ -69,7 +63,7 @@ export default function Profile() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name} testID="profile-name">
-                {user?.name || "Hydration friend"}
+                {user?.name || t("profile.friend")}
               </Text>
               <Text style={styles.email}>{user?.email}</Text>
             </View>
@@ -84,7 +78,7 @@ export default function Profile() {
                 <Drop size={22} color={colors.onBrandPrimary} weight="fill" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.targetLabel}>Daily target</Text>
+                <Text style={styles.targetLabel}>{t("profile.dailyTarget")}</Text>
                 {isLoading ? (
                   <ActivityIndicator color={colors.brandPrimary} />
                 ) : (
@@ -94,7 +88,7 @@ export default function Profile() {
                 )}
               </View>
               <View style={styles.modeBadge}>
-                <Text style={styles.modeText}>{profile?.target_mode === "custom" ? "Custom" : "Auto"}</Text>
+                <Text style={styles.modeText}>{profile?.target_mode === "custom" ? t("profile.custom") : t("profile.auto")}</Text>
               </View>
               <CaretRight size={20} color={colors.muted} />
             </View>
@@ -106,25 +100,25 @@ export default function Profile() {
           <Card style={styles.factCard}>
             <Scales size={22} color={colors.brandPrimary} weight="fill" />
             <Text style={styles.factValue}>{profile?.weight ? `${profile.weight} kg` : "—"}</Text>
-            <Text style={styles.factLabel}>Weight</Text>
+            <Text style={styles.factLabel}>{t("profile.weight")}</Text>
           </Card>
           <Card style={styles.factCard}>
             <Lightning size={22} color={colors.warning} weight="fill" />
             <Text style={styles.factValue} numberOfLines={1}>
-              {profile?.activity_level ? ACTIVITY_LABELS[profile.activity_level]?.split(" ")[0] : "—"}
+              {profile?.activity_level ? t(`activity.short.${profile.activity_level}` as any) : "—"}
             </Text>
-            <Text style={styles.factLabel}>Activity</Text>
+            <Text style={styles.factLabel}>{t("profile.activity")}</Text>
           </Card>
         </View>
 
         <Card style={{ marginTop: spacing.xs }}>
           <View style={styles.scheduleRow}>
-            <Text style={styles.scheduleLabel}>Wake up</Text>
+            <Text style={styles.scheduleLabel}>{t("profile.wakeUp")}</Text>
             <Text style={styles.scheduleValue}>{timeTo12h(profile?.wake_time || "07:00")}</Text>
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.scheduleRow}>
-            <Text style={styles.scheduleLabel}>Sleep</Text>
+            <Text style={styles.scheduleLabel}>{t("profile.sleep")}</Text>
             <Text style={styles.scheduleValue}>{timeTo12h(profile?.sleep_time || "23:00")}</Text>
           </View>
         </Card>
@@ -133,20 +127,20 @@ export default function Profile() {
         <View style={styles.menu}>
           <Pressable style={styles.menuRow} onPress={() => router.push("/target")} testID="menu-target">
             <Target size={22} color={colors.onSurface} weight="regular" />
-            <Text style={styles.menuText}>Personal water target</Text>
+            <Text style={styles.menuText}>{t("profile.personalTarget")}</Text>
             <CaretRight size={18} color={colors.muted} />
           </Pressable>
           <View style={styles.rowDivider} />
           <Pressable style={styles.menuRow} onPress={() => router.push("/settings")} testID="menu-settings">
             <Gear size={22} color={colors.onSurface} weight="regular" />
-            <Text style={styles.menuText}>Settings & preferences</Text>
+            <Text style={styles.menuText}>{t("profile.settings")}</Text>
             <CaretRight size={18} color={colors.muted} />
           </Pressable>
         </View>
 
         <Pressable style={styles.logout} onPress={onLogout} testID="logout-button">
           <SignOut size={20} color={colors.error} weight="bold" />
-          <Text style={styles.logoutText}>Sign out</Text>
+          <Text style={styles.logoutText}>{t("profile.signOut")}</Text>
         </Pressable>
       </ScrollView>
     </View>

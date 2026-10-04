@@ -5,6 +5,7 @@ import { ArrowCounterClockwise, Plus, X } from "phosphor-react-native";
 import { Sheet } from "@/src/components/Sheet";
 import { Button, Field } from "@/src/components/ui";
 import { useToast } from "@/src/context/toast";
+import { useI18n } from "@/src/i18n";
 import { useUpdateProfile } from "@/src/api/hooks";
 import { formatVolume, unitLabel, type Unit } from "@/src/lib/format";
 import {
@@ -29,6 +30,7 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const toast = useToast();
+  const { t } = useI18n();
   const updateProfile = useUpdateProfile();
 
   const [draft, setDraft] = useState<Preset[]>(presets);
@@ -67,19 +69,19 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
 
   const addPreset = () => {
     if (parsedMl === null) {
-      toast.show("Enter a valid amount", "error");
+      toast.show(t("home.enterValidAmount"), "error");
       return;
     }
     if (parsedMl > 5000) {
-      toast.show("Max 5000 ml per preset", "error");
+      toast.show(t("presets.max5000"), "error");
       return;
     }
     if (draft.some((p) => p.amount_ml === parsedMl)) {
-      toast.show("That size is already a preset", "info");
+      toast.show(t("presets.duplicate"), "info");
       return;
     }
     if (draft.length >= MAX_PRESETS) {
-      toast.show(`You can have up to ${MAX_PRESETS} presets`, "error");
+      toast.show(t("presets.maxCount", { max: MAX_PRESETS }), "error");
       return;
     }
     const next: Preset = { amount_ml: parsedMl, icon: newIcon ?? defaultIcon(parsedMl) };
@@ -90,7 +92,7 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
 
   const removePreset = (ml: number) => {
     if (draft.length <= 1) {
-      toast.show("Keep at least one preset", "info");
+      toast.show(t("presets.keepOne"), "info");
       return;
     }
     setDraft(draft.filter((p) => p.amount_ml !== ml));
@@ -100,19 +102,19 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
   const save = async () => {
     try {
       await updateProfile.mutateAsync({ quick_presets: draft });
-      toast.show("Quick-add buttons updated", "success");
+      toast.show(t("presets.saved"), "success");
       onClose();
     } catch {
-      toast.show("Could not save presets", "error");
+      toast.show(t("presets.saveError"), "error");
     }
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Quick-add presets" testID="presets-sheet">
-      <Text style={styles.hint}>Match your cups and bottles. Tap a chip to change its icon, × to remove.</Text>
+    <Sheet visible={visible} onClose={onClose} title={t("presets.title")} testID="presets-sheet">
+      <Text style={styles.hint}>{t("presets.hint")}</Text>
 
       <View style={styles.chipsHead}>
-        <Text style={styles.chipsLabel}>{draft.length}/{MAX_PRESETS} presets</Text>
+        <Text style={styles.chipsLabel}>{t("presets.count", { n: draft.length, max: MAX_PRESETS })}</Text>
         <Pressable
           onPress={() => {
             setDraft(DEFAULT_PRESETS);
@@ -123,7 +125,7 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
           testID="presets-reset-button"
         >
           <ArrowCounterClockwise size={16} color={colors.brandPrimary} weight="bold" />
-          <Text style={styles.resetText}>Reset to defaults</Text>
+          <Text style={styles.resetText}>{t("presets.reset")}</Text>
         </Pressable>
       </View>
 
@@ -155,17 +157,17 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
 
       <View>
         <Text style={styles.iconLabel}>
-          {selected !== null ? `Icon for ${formatVolume(selected, unit)}` : "Icon for new size"}
+          {selected !== null ? t("presets.iconFor", { amount: formatVolume(selected, unit) }) : t("presets.iconForNew")}
         </Text>
         <View style={styles.iconRow} testID="preset-icon-picker">
-          {PRESET_ICONS.map(({ key, label, Icon }) => {
+          {PRESET_ICONS.map(({ key, Icon }) => {
             const on = activeIcon === key;
             return (
               <Pressable
                 key={key}
                 onPress={() => pickIcon(key)}
                 style={[styles.iconBtn, on && styles.iconBtnOn]}
-                accessibilityLabel={label}
+                accessibilityLabel={t(`presets.icon.${key}` as const)}
                 testID={`preset-icon-${key}`}
               >
                 <Icon size={22} color={on ? colors.onBrandPrimary : colors.brandPrimary} weight={on ? "fill" : "regular"} />
@@ -178,13 +180,13 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
       <View style={styles.addRow}>
         <View style={{ flex: 1 }}>
           <Field
-            label={`New size (${unitLabel(unit)})`}
+            label={t("presets.newSize", { unit: unitLabel(unit) })}
             testID="preset-amount-input"
             value={amount}
             onChangeText={setAmount}
             onFocus={() => setSelected(null)}
             keyboardType="decimal-pad"
-            placeholder={unit === "l" ? "e.g. 0.75" : "e.g. 750"}
+            placeholder={unit === "l" ? t("presets.placeholderL") : t("presets.placeholderMl")}
             onSubmitEditing={addPreset}
             returnKeyType="done"
           />
@@ -198,7 +200,7 @@ export function PresetsSheet({ visible, onClose, presets, unit }: Props) {
         </Pressable>
       </View>
 
-      <Button title="Save presets" onPress={save} loading={updateProfile.isPending} testID="presets-save-button" />
+      <Button title={t("presets.save")} onPress={save} loading={updateProfile.isPending} testID="presets-save-button" />
     </Sheet>
   );
 }

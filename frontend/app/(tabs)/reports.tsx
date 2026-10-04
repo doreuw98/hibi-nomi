@@ -18,6 +18,7 @@ import { WeeklyChart } from "@/src/components/WeeklyChart";
 import { Card, EmptyState, SectionTitle } from "@/src/components/ui";
 import { Sheet } from "@/src/components/Sheet";
 import { useMonthly, useProfile, useWeekly } from "@/src/api/hooks";
+import { useI18n } from "@/src/i18n";
 import {
   addMonths,
   localDateString,
@@ -30,13 +31,12 @@ import { formatVolume, type Unit } from "@/src/lib/format";
 import { usesNativeTabs } from "@/src/navigation";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
-
 export default function Reports() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t, tArray } = useI18n();
   const today = localDateString();
 
   const { data: profile } = useProfile();
@@ -77,7 +77,7 @@ export default function Reports() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <ScreenHeader title="Reports" subtitle="Your hydration insights" />
+        <ScreenHeader title={t("reports.title")} subtitle={t("reports.subtitle")} />
       </View>
 
       <ScrollView
@@ -85,7 +85,7 @@ export default function Reports() {
         showsVerticalScrollIndicator={false}
       >
         {/* Weekly */}
-        <SectionTitle>This week</SectionTitle>
+        <SectionTitle>{t("reports.thisWeek")}</SectionTitle>
         <Card testID="weekly-report-card">
           {weeklyLoading ? (
             <View style={styles.center}>
@@ -94,8 +94,8 @@ export default function Reports() {
           ) : !weekly?.has_data ? (
             <EmptyState
               icon={<ChartLineUp size={40} color={colors.brandSecondary} weight="duotone" />}
-              title="No data available for this week"
-              subtitle="Log water for a few days to unlock weekly insights."
+              title={t("reports.noWeekTitle")}
+              subtitle={t("reports.noWeekSubtitle")}
               testID="weekly-empty-state"
             />
           ) : (
@@ -109,13 +109,13 @@ export default function Reports() {
                   <Text style={styles.kpiValue} testID="weekly-average">
                     {formatVolume(weekly.average, unit)}
                   </Text>
-                  <Text style={styles.kpiLabel}>Daily average</Text>
+                  <Text style={styles.kpiLabel}>{t("reports.dailyAverage")}</Text>
                 </View>
                 <View style={styles.kpi}>
                   <Text style={styles.kpiValue} testID="weekly-achieved">
                     {weekly.achieved_count}/7
                   </Text>
-                  <Text style={styles.kpiLabel}>Target met</Text>
+                  <Text style={styles.kpiLabel}>{t("reports.targetMet")}</Text>
                 </View>
               </View>
               <View style={styles.insights}>
@@ -123,24 +123,24 @@ export default function Reports() {
                   {trendIcon(weekly.trend)}
                   <Text style={styles.insightText}>
                     {weekly.trend === "up"
-                      ? "Trending up — nice momentum!"
+                      ? t("reports.trendUp")
                       : weekly.trend === "down"
-                        ? "Trending down — let's bounce back."
-                        : "Holding steady this week."}
+                        ? t("reports.trendDown")
+                        : t("reports.trendSteady")}
                   </Text>
                 </View>
                 {weekly.highest ? (
                   <Text style={styles.insightText}>
-                    • Highest: {formatVolume(weekly.highest.total, unit)} on {shortDayName(weekly.highest.date)}
+                    {t("reports.highest", { amount: formatVolume(weekly.highest.total, unit), day: shortDayName(weekly.highest.date) })}
                   </Text>
                 ) : null}
                 {weekly.lowest ? (
                   <Text style={styles.insightText}>
-                    • Lowest: {formatVolume(weekly.lowest.total, unit)} on {shortDayName(weekly.lowest.date)}
+                    {t("reports.lowest", { amount: formatVolume(weekly.lowest.total, unit), day: shortDayName(weekly.lowest.date) })}
                   </Text>
                 ) : null}
                 <Text style={styles.insightText}>
-                  • You reached your target on {weekly.achieved_count} of 7 days.
+                  {t("reports.reached", { n: weekly.achieved_count })}
                 </Text>
               </View>
             </>
@@ -148,13 +148,13 @@ export default function Reports() {
         </Card>
 
         <Pressable style={styles.linkRow} onPress={() => router.push("/day-graph")} testID="view-daily-graph-link">
-          <Text style={styles.linkText}>View daily graph & previous days</Text>
+          <Text style={styles.linkText}>{t("reports.viewDaily")}</Text>
           <ArrowRight size={18} color={colors.brandPrimary} weight="bold" />
         </Pressable>
 
         {/* Monthly */}
         <View style={styles.monthHead}>
-          <SectionTitle style={{ marginBottom: 0 }}>Monthly</SectionTitle>
+          <SectionTitle style={{ marginBottom: 0 }}>{t("reports.monthly")}</SectionTitle>
           <View style={styles.monthNav}>
             <Pressable onPress={() => setMonth(addMonths(month, -1))} hitSlop={10} testID="month-prev">
               <CaretLeft size={22} color={colors.onSurface} weight="bold" />
@@ -187,23 +187,23 @@ export default function Reports() {
                   <Text style={styles.kpiValue} testID="monthly-average">
                     {formatVolume(monthly?.monthly_average || 0, unit)}
                   </Text>
-                  <Text style={styles.kpiLabel}>Avg / active day</Text>
+                  <Text style={styles.kpiLabel}>{t("reports.avgActive")}</Text>
                 </View>
                 <View style={styles.kpi}>
                   <Text style={styles.kpiValue} testID="monthly-success-days">
                     {monthly?.success_days || 0}
                   </Text>
-                  <Text style={styles.kpiLabel}>Days target met</Text>
+                  <Text style={styles.kpiLabel}>{t("reports.daysTargetMet")}</Text>
                 </View>
                 <View style={styles.kpi}>
                   <Text style={styles.kpiValue}>{formatVolume(monthly?.monthly_total || 0, unit)}</Text>
-                  <Text style={styles.kpiLabel}>Total this month</Text>
+                  <Text style={styles.kpiLabel}>{t("reports.totalMonth")}</Text>
                 </View>
               </View>
 
               {/* calendar */}
               <View style={styles.weekRow}>
-                {WEEKDAYS.map((w, i) => (
+                {tArray("date.daysInitial").map((w, i) => (
                   <Text key={i} style={styles.weekLabel}>
                     {w}
                   </Text>
@@ -242,10 +242,10 @@ export default function Reports() {
               {/* legend */}
               <View style={styles.legend}>
                 {[
-                  { k: "achieved", label: "Goal met" },
-                  { k: "partial", label: "Partial" },
-                  { k: "low", label: "Low" },
-                  { k: "none", label: "No data" },
+                  { k: "achieved", label: t("reports.legendGoal") },
+                  { k: "partial", label: t("reports.legendPartial") },
+                  { k: "low", label: t("reports.legendLow") },
+                  { k: "none", label: t("reports.legendNone") },
                 ].map((l) => (
                   <View key={l.k} style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: statusColor(l.k) }]} />
@@ -267,15 +267,15 @@ export default function Reports() {
         {selectedDay ? (
           <View style={styles.daySheet}>
             <View style={styles.daySheetRow}>
-              <Text style={styles.daySheetLabel}>Total intake</Text>
+              <Text style={styles.daySheetLabel}>{t("reports.totalIntake")}</Text>
               <Text style={styles.daySheetValue}>{formatVolume(selectedDay.total, unit)}</Text>
             </View>
             <View style={styles.daySheetRow}>
-              <Text style={styles.daySheetLabel}>Daily target</Text>
+              <Text style={styles.daySheetLabel}>{t("reports.dailyTarget")}</Text>
               <Text style={styles.daySheetValue}>{formatVolume(selectedDay.target, unit)}</Text>
             </View>
             <View style={styles.daySheetRow}>
-              <Text style={styles.daySheetLabel}>Achievement</Text>
+              <Text style={styles.daySheetLabel}>{t("reports.achievement")}</Text>
               <Text style={[styles.daySheetValue, { color: statusColor(selectedDay.status) }]}>
                 {selectedDay.percentage}%
               </Text>

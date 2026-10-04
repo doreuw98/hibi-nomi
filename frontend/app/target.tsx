@@ -10,7 +10,8 @@ import { TimeField } from "@/src/components/TimeField";
 import { Button, Card, Field, SectionTitle } from "@/src/components/ui";
 import { useToast } from "@/src/context/toast";
 import { useProfile, useUpdateProfile } from "@/src/api/hooks";
-import { ACTIVITY_OPTIONS, calculateTarget } from "@/src/lib/target";
+import { ACTIVITY_LEVELS, calculateTarget } from "@/src/lib/target";
+import { useI18n } from "@/src/i18n";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 export default function TargetScreen() {
@@ -19,6 +20,7 @@ export default function TargetScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
+  const { t } = useI18n();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
 
@@ -57,16 +59,16 @@ export default function TargetScreen() {
         target_mode: mode,
         ...(mode === "custom" ? { daily_target: customTarget } : {}),
       } as any);
-      toast.show("Target saved 💧", "success");
+      toast.show(t("target.saved"), "success");
       router.back();
     } catch {
-      toast.show("Could not save target", "error");
+      toast.show(t("target.saveError"), "error");
     }
   };
 
   return (
     <View style={styles.root}>
-      <StackHeader title="Personal target" />
+      <StackHeader title={t("target.title")} />
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         keyboardShouldPersistTaps="handled"
@@ -76,14 +78,14 @@ export default function TargetScreen() {
           <View style={styles.previewIcon}>
             <Drop size={26} color={colors.onBrandPrimary} weight="fill" />
           </View>
-          <Text style={styles.previewLabel}>Your daily target</Text>
+          <Text style={styles.previewLabel}>{t("target.yourTarget")}</Text>
           <Text style={styles.previewValue} testID="target-effective-value">
             {effectiveTarget} ml
           </Text>
           {mode === "custom" ? (
-            <Text style={styles.previewHint}>Auto suggestion: {autoTarget} ml</Text>
+            <Text style={styles.previewHint}>{t("target.autoSuggestion", { n: autoTarget })}</Text>
           ) : (
-            <Text style={styles.previewHint}>Calculated from your weight & activity</Text>
+            <Text style={styles.previewHint}>{t("target.calculated")}</Text>
           )}
         </Card>
 
@@ -94,20 +96,20 @@ export default function TargetScreen() {
             onPress={() => setMode("auto")}
             testID="target-mode-auto"
           >
-            <Text style={[styles.segmentText, mode === "auto" && styles.segmentTextActive]}>Automatic</Text>
+            <Text style={[styles.segmentText, mode === "auto" && styles.segmentTextActive]}>{t("target.automatic")}</Text>
           </Pressable>
           <Pressable
             style={[styles.segmentItem, mode === "custom" && styles.segmentActive]}
             onPress={() => setMode("custom")}
             testID="target-mode-custom"
           >
-            <Text style={[styles.segmentText, mode === "custom" && styles.segmentTextActive]}>Custom</Text>
+            <Text style={[styles.segmentText, mode === "custom" && styles.segmentTextActive]}>{t("target.custom")}</Text>
           </Pressable>
         </View>
 
         {mode === "custom" ? (
           <Card>
-            <Text style={styles.fieldLabel}>Set your custom target</Text>
+            <Text style={styles.fieldLabel}>{t("target.setCustom")}</Text>
             <View style={styles.stepper}>
               <Pressable style={styles.stepBtn} onPress={() => step(-50)} testID="target-decrease">
                 <Minus size={22} color={colors.brandPrimary} weight="bold" />
@@ -125,40 +127,40 @@ export default function TargetScreen() {
           </Card>
         ) : null}
 
-        <SectionTitle style={{ marginTop: spacing.lg }}>Your details</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("target.yourDetails")}</SectionTitle>
         <Field
-          label="Weight (kg)"
+          label={t("target.weightKg")}
           testID="target-weight-input"
           value={weight}
           onChangeText={setWeight}
           keyboardType="decimal-pad"
-          placeholder="e.g. 65"
+          placeholder={t("target.weightPlaceholder")}
         />
-        <Text style={styles.fieldLabel}>Activity level</Text>
+        <Text style={styles.fieldLabel}>{t("target.activityLevel")}</Text>
         <View style={styles.chips}>
-          {ACTIVITY_OPTIONS.map((opt) => {
-            const active = activity === opt.value;
+          {ACTIVITY_LEVELS.map((lvl) => {
+            const active = activity === lvl;
             return (
               <Pressable
-                key={opt.value}
+                key={lvl}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setActivity(opt.value)}
-                testID={`target-activity-${opt.value}`}
+                onPress={() => setActivity(lvl)}
+                testID={`target-activity-${lvl}`}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(`activity.${lvl}` as const)}</Text>
               </Pressable>
             );
           })}
         </View>
 
-        <SectionTitle style={{ marginTop: spacing.lg }}>Daily schedule</SectionTitle>
-        <Text style={styles.scheduleHint}>Used to set your active hydration window for reminders.</Text>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("target.dailySchedule")}</SectionTitle>
+        <Text style={styles.scheduleHint}>{t("target.scheduleHint")}</Text>
         <View style={styles.timeRow}>
-          <TimeField label="Wake up" value={wake} onChange={setWake} testID="target-wake-time" />
-          <TimeField label="Sleep" value={sleep} onChange={setSleep} testID="target-sleep-time" />
+          <TimeField label={t("profile.wakeUp")} value={wake} onChange={setWake} testID="target-wake-time" />
+          <TimeField label={t("profile.sleep")} value={sleep} onChange={setSleep} testID="target-sleep-time" />
         </View>
 
-        <Button title="Save target" onPress={save} loading={updateProfile.isPending} testID="target-save-button" style={{ marginTop: spacing.xl }} />
+        <Button title={t("target.save")} onPress={save} loading={updateProfile.isPending} testID="target-save-button" style={{ marginTop: spacing.xl }} />
       </KeyboardAwareScrollView>
     </View>
   );

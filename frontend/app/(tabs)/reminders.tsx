@@ -10,6 +10,7 @@ import { Button, Card, Field, SectionTitle } from "@/src/components/ui";
 import { Sheet } from "@/src/components/Sheet";
 import { useToast } from "@/src/context/toast";
 import { useReminders, useUpdateReminders } from "@/src/api/hooks";
+import { useI18n } from "@/src/i18n";
 import {
   getPermissionStatus,
   requestPermission,
@@ -21,19 +22,19 @@ import { usesNativeTabs } from "@/src/navigation";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const INTERVALS = [
-  { v: 30, label: "30 min" },
-  { v: 60, label: "1 hour" },
-  { v: 90, label: "90 min" },
-  { v: 120, label: "2 hours" },
-  { v: 180, label: "3 hours" },
-];
+  { v: 30, key: "reminders.min30" },
+  { v: 60, key: "reminders.hour1" },
+  { v: 90, key: "reminders.min90" },
+  { v: 120, key: "reminders.hours2" },
+  { v: 180, key: "reminders.hours3" },
+] as const;
 
 const PAUSES = [
-  { label: "30 min", minutes: 30 },
-  { label: "1 hour", minutes: 60 },
-  { label: "2 hours", minutes: 120 },
-  { label: "Until tomorrow", minutes: -1 },
-];
+  { key: "reminders.min30", minutes: 30 },
+  { key: "reminders.hour1", minutes: 60 },
+  { key: "reminders.hours2", minutes: 120 },
+  { key: "reminders.untilTomorrow", minutes: -1 },
+] as const;
 
 function hhmmToDate(hhmm: string): Date {
   const [h, m] = hhmm.split(":").map((x) => parseInt(x, 10));
@@ -51,6 +52,7 @@ export default function Reminders() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { t } = useI18n();
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
 
   const { data: reminders, isLoading } = useReminders();
@@ -86,7 +88,7 @@ export default function Reminders() {
       await rescheduleReminders(updated);
       if (successMsg) toast.show(successMsg, "success");
     } catch {
-      toast.show("Could not update reminders", "error");
+      toast.show(t("reminders.updateError"), "error");
     }
   };
 
@@ -97,12 +99,12 @@ export default function Reminders() {
         setShowRationale(true);
         return;
       } else {
-        toast.show("Enable notifications in Settings to get reminders", "error");
+        toast.show(t("reminders.enableInSettings"), "error");
         // still save the preference; it just won't fire until permission granted
       }
     }
     setPermission(perm);
-    await save({ enabled: true, paused_until: null }, "Reminders on 💧");
+    await save({ enabled: true, paused_until: null }, t("reminders.on"));
   };
 
   const confirmRationale = async () => {
@@ -110,9 +112,9 @@ export default function Reminders() {
     const perm = await requestPermission();
     setPermission(perm);
     if (perm.granted) {
-      await save({ enabled: true, paused_until: null }, "Reminders on 💧");
+      await save({ enabled: true, paused_until: null }, t("reminders.on"));
     } else {
-      toast.show("Notifications are off — you can enable them anytime", "info");
+      toast.show(t("reminders.notifOff"), "info");
       await save({ enabled: true }, undefined);
     }
   };
@@ -122,7 +124,7 @@ export default function Reminders() {
       await enableReminders();
     } else {
       await cancelAllReminders();
-      await save({ enabled: false }, "Reminders off");
+      await save({ enabled: false }, t("reminders.off"));
     }
   };
 
@@ -130,8 +132,8 @@ export default function Reminders() {
     setPicker(null);
     if (!date) return;
     const hhmm = dateToHHMM(date);
-    if (which === "start") save({ start_time: hhmm }, "Start time updated");
-    else save({ end_time: hhmm }, "End time updated");
+    if (which === "start") save({ start_time: hhmm }, t("reminders.startUpdated"));
+    else save({ end_time: hhmm }, t("reminders.endUpdated"));
   };
 
   const openTime = (which: "start" | "end") => {
@@ -145,13 +147,13 @@ export default function Reminders() {
 
   const saveWebTime = () => {
     if (!/^\d{2}:\d{2}$/.test(webTimeValue)) {
-      toast.show("Use HH:MM format", "error");
+      toast.show(t("reminders.hhmm"), "error");
       return;
     }
     const which = webTimeOpen;
     setWebTimeOpen(null);
-    if (which === "start") save({ start_time: webTimeValue }, "Start time updated");
-    else save({ end_time: webTimeValue }, "End time updated");
+    if (which === "start") save({ start_time: webTimeValue }, t("reminders.startUpdated"));
+    else save({ end_time: webTimeValue }, t("reminders.endUpdated"));
   };
 
   const doPause = async (minutes: number) => {
@@ -164,11 +166,11 @@ export default function Reminders() {
     } else {
       until = new Date(Date.now() + minutes * 60 * 1000);
     }
-    await save({ paused_until: until.toISOString() }, "Reminders paused");
+    await save({ paused_until: until.toISOString() }, t("reminders.pausedToast"));
   };
 
   const resume = async () => {
-    await save({ paused_until: null }, "Reminders resumed 💧");
+    await save({ paused_until: null }, t("reminders.resumed"));
   };
 
   const isPaused = reminders?.paused_until && new Date(reminders.paused_until).getTime() > Date.now();
@@ -184,7 +186,7 @@ export default function Reminders() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <ScreenHeader title="Reminders" subtitle="Gentle nudges to stay hydrated" />
+        <ScreenHeader title={t("reminders.title")} subtitle={t("reminders.subtitle")} />
       </View>
 
       <ScrollView
@@ -202,9 +204,9 @@ export default function Reminders() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.masterTitle}>Drinking reminders</Text>
+              <Text style={styles.masterTitle}>{t("reminders.drinking")}</Text>
               <Text style={styles.masterSub}>
-                {reminders.enabled ? "Active" : "Turn on to get water nudges"}
+                {reminders.enabled ? t("reminders.active") : t("reminders.turnOn")}
               </Text>
             </View>
             <Switch
@@ -217,7 +219,7 @@ export default function Reminders() {
           </View>
           {!permission.granted && reminders.enabled ? (
             <Pressable style={styles.permBanner} onPress={() => Linking.openSettings()} testID="open-settings-button">
-              <Text style={styles.permText}>Notifications are blocked. Tap to open Settings.</Text>
+              <Text style={styles.permText}>{t("reminders.blocked")}</Text>
             </Pressable>
           ) : null}
         </Card>
@@ -227,18 +229,18 @@ export default function Reminders() {
             <View style={styles.masterRow}>
               <PauseCircle size={24} color={colors.warning} weight="fill" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.masterTitle}>Paused</Text>
+                <Text style={styles.masterTitle}>{t("reminders.paused")}</Text>
                 <Text style={styles.masterSub}>
-                  Until {new Date(reminders.paused_until!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {t("reminders.until", { time: timeTo12h(dateToHHMM(new Date(reminders.paused_until!))) })}
                 </Text>
               </View>
-              <Button title="Resume" variant="secondary" onPress={resume} testID="resume-button" />
+              <Button title={t("reminders.resume")} variant="secondary" onPress={resume} testID="resume-button" />
             </View>
           </Card>
         ) : null}
 
         {/* Interval */}
-        <SectionTitle style={{ marginTop: spacing.sm }}>Remind me every</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.sm }}>{t("reminders.every")}</SectionTitle>
         <View style={styles.chipsWrap}>
           {INTERVALS.map((it) => {
             const active = reminders.interval_minutes === it.v;
@@ -246,22 +248,22 @@ export default function Reminders() {
               <Pressable
                 key={it.v}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => save({ interval_minutes: it.v }, "Interval updated")}
+                onPress={() => save({ interval_minutes: it.v }, t("reminders.intervalUpdated"))}
                 testID={`interval-${it.v}`}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{it.label}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(it.key)}</Text>
               </Pressable>
             );
           })}
         </View>
 
         {/* Active window */}
-        <SectionTitle style={{ marginTop: spacing.lg }}>Active window</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("reminders.activeWindow")}</SectionTitle>
         <Card>
           <Pressable style={styles.timeRow} onPress={() => openTime("start")} testID="start-time-row">
             <View style={styles.timeLeft}>
               <Clock size={20} color={colors.brandPrimary} weight="fill" />
-              <Text style={styles.timeLabel}>Start</Text>
+              <Text style={styles.timeLabel}>{t("reminders.start")}</Text>
             </View>
             <Text style={styles.timeValue}>{timeTo12h(reminders.start_time)}</Text>
           </Pressable>
@@ -269,33 +271,31 @@ export default function Reminders() {
           <Pressable style={styles.timeRow} onPress={() => openTime("end")} testID="end-time-row">
             <View style={styles.timeLeft}>
               <Clock size={20} color={colors.info} weight="fill" />
-              <Text style={styles.timeLabel}>End</Text>
+              <Text style={styles.timeLabel}>{t("reminders.end")}</Text>
             </View>
             <Text style={styles.timeValue}>{timeTo12h(reminders.end_time)}</Text>
           </Pressable>
         </Card>
 
         {/* Pause */}
-        <SectionTitle style={{ marginTop: spacing.lg }}>Pause reminders</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing.lg }}>{t("reminders.pause")}</SectionTitle>
         <View style={styles.chipsWrap}>
           {PAUSES.map((p) => (
             <Pressable
-              key={p.label}
+              key={p.minutes}
               style={[styles.chip, styles.pauseChip]}
               onPress={() => doPause(p.minutes)}
               testID={`pause-${p.minutes}`}
             >
-              <Text style={styles.chipText}>{p.label}</Text>
+              <Text style={styles.chipText}>{t(p.key)}</Text>
             </Pressable>
           ))}
         </View>
 
         {Platform.OS !== "web" ? (
-          <Text style={styles.note}>
-            Reminders are scheduled on your device and work even when the app is closed.
-          </Text>
+          <Text style={styles.note}>{t("reminders.noteNative")}</Text>
         ) : (
-          <Text style={styles.note}>Notifications fire on the mobile app, not the web preview.</Text>
+          <Text style={styles.note}>{t("reminders.noteWeb")}</Text>
         )}
       </ScrollView>
 
@@ -308,16 +308,14 @@ export default function Reminders() {
         />
       ) : null}
 
-      <Sheet visible={!!showRationale} onClose={() => setShowRationale(false)} title="Enable notifications" testID="rationale-sheet">
-        <Text style={styles.rationale}>
-          HIBI NOMI sends friendly reminders to drink water during your active hours. We only use this to nudge you — nothing else.
-        </Text>
-        <Button title="Allow notifications" onPress={confirmRationale} testID="rationale-allow-button" />
+      <Sheet visible={!!showRationale} onClose={() => setShowRationale(false)} title={t("reminders.enableTitle")} testID="rationale-sheet">
+        <Text style={styles.rationale}>{t("reminders.rationale")}</Text>
+        <Button title={t("reminders.allow")} onPress={confirmRationale} testID="rationale-allow-button" />
       </Sheet>
 
-      <Sheet visible={!!webTimeOpen} onClose={() => setWebTimeOpen(null)} title="Set time (HH:MM)" testID="web-time-sheet">
+      <Sheet visible={!!webTimeOpen} onClose={() => setWebTimeOpen(null)} title={t("reminders.setTime")} testID="web-time-sheet">
         <Field testID="web-time-input" value={webTimeValue} onChangeText={setWebTimeValue} placeholder="07:00" />
-        <Button title="Save time" onPress={saveWebTime} testID="web-time-save" />
+        <Button title={t("reminders.saveTime")} onPress={saveWebTime} testID="web-time-save" />
       </Sheet>
     </View>
   );

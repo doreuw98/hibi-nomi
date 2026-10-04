@@ -49,6 +49,7 @@ ACTIVITY_LEVELS = {"sedentary", "light", "moderate", "active", "very_active"}
 DEFAULT_PRESETS = [100, 200, 250, 300, 500]
 MAX_PRESETS = 6
 PRESET_ICONS = {"glass", "mug", "bottle", "drop", "wine", "jar"}
+LANGUAGES = {"en", "id", "ja"}
 
 
 def default_preset_icon(ml: int) -> str:
@@ -227,6 +228,7 @@ class ProfileIn(BaseModel):
     target_mode: Optional[str] = None
     daily_target: Optional[int] = None
     onboarded: Optional[bool] = None
+    language: Optional[str] = None
     quick_presets: Optional[List["PresetIn"]] = None
 
     @field_validator("quick_presets")
@@ -322,6 +324,7 @@ def public_profile(p: dict) -> dict:
         "daily_target": p.get("daily_target", 2000),
         "onboarded": p.get("onboarded", False),
         "quick_presets": normalize_presets(p.get("quick_presets")),
+        "language": p.get("language") or "en",
     }
 
 
@@ -523,7 +526,11 @@ async def forgot_password(body: ForgotIn, request: Request):
         }},
     )
     try:
-        await send_password_reset_email(to=email, name=user.get("name"), code=code, minutes=RESET_CODE_MINUTES)
+        profile = await ensure_profile(user["user_id"], user.get("name"))
+        await send_password_reset_email(
+            to=email, name=user.get("name"), code=code, minutes=RESET_CODE_MINUTES,
+            lang=profile.get("language") or "en",
+        )
     except Exception as e:  # noqa: BLE001
         # Never reveal whether the account exists; failure is already logged by email_service.
         logger.warning("Reset email not delivered for user %s: %s", user["user_id"], getattr(e, "detail", e))
@@ -586,6 +593,8 @@ async def update_profile(body: ProfileIn, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=422, detail="Invalid unit")
     if "target_mode" in updates and updates["target_mode"] not in ("auto", "custom"):
         raise HTTPException(status_code=422, detail="Invalid target mode")
+    if "language" in updates and updates["language"] not in LANGUAGES:
+        raise HTTPException(status_code=422, detail="Unsupported language")
 
     if updates.get("target_mode") == "auto":
         weight = updates.get("weight", p.get("weight"))

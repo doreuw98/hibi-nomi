@@ -7,6 +7,7 @@ import { AuthShell } from "@/src/components/AuthShell";
 import { Button, Field } from "@/src/components/ui";
 import { useAuth } from "@/src/context/auth";
 import { useToast } from "@/src/context/toast";
+import { useI18n } from "@/src/i18n";
 import { fonts, fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { ApiError } from "@/src/api/client";
 
@@ -16,6 +17,7 @@ export default function Login() {
   const router = useRouter();
   const { login, loginWithGoogle } = useAuth();
   const toast = useToast();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,9 +27,9 @@ export default function Login() {
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!email.trim()) e.email = "Email is required";
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) e.email = "Enter a valid email";
-    if (!password) e.password = "Password is required";
+    if (!email.trim()) e.email = t("auth.emailRequired");
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) e.email = t("auth.emailInvalid");
+    if (!password) e.password = t("auth.passwordRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -37,9 +39,9 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
-      toast.show("Welcome back! 💧", "success");
+      toast.show(t("auth.welcomeBack"), "success");
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Could not sign in";
+      const msg = err instanceof ApiError ? err.message : t("auth.couldNotSignIn");
       toast.show(msg, "error");
     } finally {
       setLoading(false);
@@ -51,26 +53,26 @@ export default function Login() {
     try {
       await loginWithGoogle();
     } catch {
-      toast.show("Google sign-in was cancelled", "error");
+      toast.show(t("auth.googleCancelled"), "error");
     } finally {
       setGoogleLoading(false);
     }
   };
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to continue your hydration journey">
+    <AuthShell title={t("auth.loginTitle")} subtitle={t("auth.loginSubtitle")}>
       <Field
-        label="Email"
+        label={t("auth.email")}
         testID="login-email-input"
         value={email}
         onChangeText={setEmail}
         error={errors.email}
         autoCapitalize="none"
         keyboardType="email-address"
-        placeholder="you@example.com"
+        placeholder={t("auth.emailPlaceholder")}
       />
       <Field
-        label="Password"
+        label={t("auth.password")}
         testID="login-password-input"
         value={password}
         onChangeText={setPassword}
@@ -80,15 +82,15 @@ export default function Login() {
       />
       <Link href="/(auth)/forgot-password" asChild>
         <Pressable style={styles.forgotWrap} testID="forgot-password-link">
-          <Text style={styles.forgot}>Forgot password?</Text>
+          <Text style={styles.forgot}>{t("auth.forgotPassword")}</Text>
         </Pressable>
       </Link>
 
-      <Button title="Sign in" onPress={onLogin} loading={loading} testID="login-submit-button" />
+      <Button title={t("auth.signIn")} onPress={onLogin} loading={loading} testID="login-submit-button" />
 
       <View style={styles.dividerRow}>
         <View style={styles.line} />
-        <Text style={styles.or}>or</Text>
+        <Text style={styles.or}>{t("auth.or")}</Text>
         <View style={styles.line} />
       </View>
 
@@ -98,14 +100,14 @@ export default function Login() {
         testID="google-login-button"
       >
         <GoogleLogo size={22} color={colors.onSurface} weight="bold" />
-        <Text style={styles.googleText}>{googleLoading ? "Opening…" : "Continue with Google"}</Text>
+        <Text style={styles.googleText}>{googleLoading ? t("auth.opening") : t("auth.continueGoogle")}</Text>
       </Pressable>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>New here? </Text>
+        <Text style={styles.footerText}>{t("auth.newHere")}</Text>
         <Link href="/(auth)/register" asChild>
           <Pressable testID="go-to-register-link">
-            <Text style={styles.footerLink}>Create an account</Text>
+            <Text style={styles.footerLink}>{t("auth.createAccount")}</Text>
           </Pressable>
         </Link>
       </View>
