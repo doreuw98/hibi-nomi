@@ -1,0 +1,29 @@
+{
+  "summary": "Backend-only verification of the forgot-password undeliverable-email hardening (follow-up to iteration_4). The endpoint now swallows HTTPException raised by email_service.send_email when the Emergent/Resend proxy rejects a recipient with 422 'undeliverable_recipient', logs 'Reset email not delivered for user ...' as a WARNING, and returns the generic 200 {ok:true, message:'If an account exists for this email, we've sent a reset code.'} — identical shape and status to the unknown-email response, closing the previous account-enumeration side channel (demo@hibinomi.app used to surface 502). Verified against the public preview URL. Re-ran the full /app/backend/tests/test_security_fixes.py regression suite (9 tests) — all passed. Added one new regression test `test_undeliverable_email_still_returns_generic_200` that pins this behaviour and runs green (10/10 overall).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_security_fixes.py",
+    "/app/test_reports/pytest/pytest_security_fixes.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L525-530: try/except narrowly catches only HTTPException from send_password_reset_email. If email_service were to ever raise a non-HTTPException (e.g. a bug in _assert_safe_email -> ValueError, or an unexpected httpx exception not re-wrapped), the forgot-password handler would still 500 and leak account existence. Consider a broader `except Exception` with the same WARNING log, since the generic 200 response is the security contract and any failure path should respect it.",
+    "server.py L525-529 vs email_service.py L117-122: the client sees the vendor error string ('Could not send the email right now. Please try again later.') logged into the server WARNING, which is fine, but the underlying 422 body from Resend is also logged at ERROR level by email_service — that double-logging is noisy but acceptable. No action needed, flagging for awareness.",
+    "In-memory rate-limit bucket (_rate_buckets, server.py L146) is per-process and shared across all callers; forgot-password cap of 3/15min per email can be hit quickly during repeated test runs. Not a bug — just worth documenting in README/test playbook so future testers know to space out runs when hitting delivered@resend.dev."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_security_fixes.py (added TestForgotPasswordSecurity.test_undeliverable_email_still_returns_generic_200 regression)"
+  ],
+  "success_rate": {"backend": "100% (10/10 security tests)", "frontend": "not tested (backend-only scope)"},
+  "seed_data_creation": "No new seed data created. Existing seeded accounts verified intact: demo@hibinomi.app/water123 (login 200) and delivered@resend.dev/water123 (full reset cycle test restores water123 at end).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Forgot-password rate limit is 3/email/15min and 10/ip/15min — if 429s show up unexpectedly, wait 15 min or hit a fresh random email (limiter runs before user lookup). The new test test_undeliverable_email_still_returns_generic_200 consumes 1 call for demo@hibinomi.app and 1 for nobody@example.com; the full suite consumes additional calls on delivered@resend.dev inside test_full_reset_cycle_... (2 cycles). To re-run everything cleanly, start from a cool bucket. Backend logs are at /var/log/supervisor/backend.*.log — look for 'WARNING:hibinomi:Reset email not delivered for user' to confirm the swallowed-exception path fired.",
+  "rca_of_issue": "Before the fix: forgot_password() awaited send_password_reset_email() directly. When Resend returned 422 undeliverable_recipient for demo@hibinomi.app, email_service wrapped it as HTTPException(502). FastAPI propagated the 502 to the client, so attackers could distinguish 'real but undeliverable account' (502) from 'unknown account' (200) — account enumeration. Fix (server.py L525-530): the await is now wrapped in try/except HTTPException; on failure we log a WARNING and still return the generic 200 payload. Reproduction: POST /api/auth/forgot-password with {email: demo@hibinomi.app} now yields 200 {ok:true,message:...} identical to {email: nobody@example.com}; backend log shows 'WARNING:hibinomi:Reset email not delivered for user user_2949350c1a6e: Could not send the email right now. Please try again later.' instead of surfacing 502."
+}

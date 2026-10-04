@@ -7,7 +7,7 @@ Sections:
   - Business logic (target calculation, day aggregation)
   - Routes: auth / profile / intakes / reports / reminders / export
 """
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Query
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Query, Request
 from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -18,8 +18,11 @@ import csv
 import logging
 import uuid
 import secrets
+import string
+import time
 import bcrypt
 import httpx
+from collections import defaultdict, deque
 from pathlib import Path
 from datetime import datetime, timezone, timedelta, date
 from typing import Optional, List
@@ -27,6 +30,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
+
+from email_service import send_password_reset_email  # noqa: E402  (needs env loaded first)
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -125,6 +130,43 @@ def verify_password(pw: str, hashed: str) -> bool:
         return bcrypt.checkpw(pw.encode("utf-8"), hashed.encode("utf-8"))
     except Exception:
         return False
+
+
+RESET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I ambiguity
+RESET_CODE_MINUTES = 15
+
+
+def make_reset_code() -> str:
+    return "".join(secrets.choice(RESET_CODE_ALPHABET) for _ in range(8))
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (in-memory sliding window; per-process)
+# ---------------------------------------------------------------------------
+_rate_buckets: dict = defaultdict(deque)
+
+
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(key: str, limit: int, window_sec: int) -> None:
+    now = time.monotonic()
+    q = _rate_buckets[key]
+    while q and now - q[0] > window_sec:
+        q.popleft()
+    if len(q) >= limit:
+        raise HTTPException(status_code=429, detail="Too many attempts. Please wait a few minutes and try again.")
+    q.append(now)
+
+
+def csv_safe(value) -> str:
+    """Neutralise spreadsheet formula injection."""
+    s = "" if value is None else str(value)
+    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
 
 
 # ---------------------------------------------------------------------------
@@ -384,10 +426,14 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 # Auth routes
 # ---------------------------------------------------------------------------
 @api.post("/auth/register")
-async def register(body: RegisterIn):
+async def register(body: RegisterIn, request: Request):
+    rate_limit(f"register:{client_ip(request)}", 10, 15 * 60)
     existing = await db.users.find_one({"email": body.email.lower()})
     if existing:
-        raise HTTPException(status_code=409, detail="An account with this email already exists")
+        raise HTTPException(
+            status_code=409,
+            detail="We couldn't create an account with this email. Try signing in or resetting your password.",
+        )
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     await db.users.insert_one(
         {
@@ -409,8 +455,11 @@ async def register(body: RegisterIn):
 
 
 @api.post("/auth/login")
-async def login(body: LoginIn):
-    user = await db.users.find_one({"email": body.email.lower()}, {"_id": 0})
+async def login(body: LoginIn, request: Request):
+    email = body.email.lower()
+    rate_limit(f"login:ip:{client_ip(request)}", 20, 15 * 60)
+    rate_limit(f"login:email:{email}", 10, 15 * 60)
+    user = await db.users.find_one({"email": email}, {"_id": 0})
     if not user or not user.get("password_hash") or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     profile = await ensure_profile(user["user_id"], user.get("name"))
@@ -457,21 +506,35 @@ async def google_session(body: SessionIn):
 
 
 @api.post("/auth/forgot-password")
-async def forgot_password(body: ForgotIn):
-    user = await db.users.find_one({"email": body.email.lower()}, {"_id": 0})
+async def forgot_password(body: ForgotIn, request: Request):
+    email = body.email.lower()
+    rate_limit(f"forgot:ip:{client_ip(request)}", 10, 15 * 60)
+    rate_limit(f"forgot:email:{email}", 3, 15 * 60)
+    generic = {"ok": True, "message": "If an account exists for this email, we've sent a reset code."}
+    user = await db.users.find_one({"email": email}, {"_id": 0})
     if not user or user.get("auth_provider") == "google":
-        return {"ok": True, "reset_token": None, "message": "If an account exists, a reset code has been issued."}
-    reset_token = secrets.token_urlsafe(6)
+        return generic
+    code = make_reset_code()
     await db.users.update_one(
         {"user_id": user["user_id"]},
-        {"$set": {"reset_token": reset_token, "reset_expires": now_utc() + timedelta(minutes=30)}},
+        {"$set": {
+            "reset_token": code,
+            "reset_expires": now_utc() + timedelta(minutes=RESET_CODE_MINUTES),
+        }},
     )
-    return {"ok": True, "reset_token": reset_token, "message": "Use this code to reset your password."}
+    try:
+        await send_password_reset_email(to=email, name=user.get("name"), code=code, minutes=RESET_CODE_MINUTES)
+    except Exception as e:  # noqa: BLE001
+        # Never reveal whether the account exists; failure is already logged by email_service.
+        logger.warning("Reset email not delivered for user %s: %s", user["user_id"], getattr(e, "detail", e))
+    return generic
 
 
 @api.post("/auth/reset-password")
-async def reset_password(body: ResetIn):
-    user = await db.users.find_one({"reset_token": body.reset_token}, {"_id": 0})
+async def reset_password(body: ResetIn, request: Request):
+    rate_limit(f"reset:ip:{client_ip(request)}", 10, 15 * 60)
+    code = body.reset_token.strip().upper()
+    user = await db.users.find_one({"reset_token": code}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset code")
     exp = user.get("reset_expires")
@@ -485,6 +548,8 @@ async def reset_password(body: ResetIn):
         {"$set": {"password_hash": hash_password(body.new_password), "updated_at": now_utc()},
          "$unset": {"reset_token": "", "reset_expires": ""}},
     )
+    # Revoke every existing session so a stolen token stops working.
+    await db.user_sessions.delete_many({"user_id": user["user_id"]})
     return {"ok": True}
 
 
@@ -774,7 +839,7 @@ async def export_csv(user: dict = Depends(get_current_user)):
     for r in rows:
         consumed = r.get("consumed_at") or ""
         time_part = consumed[11:16] if len(consumed) >= 16 else ""
-        writer.writerow([r.get("local_date", ""), time_part, r.get("amount_ml", 0), target, (r.get("note") or "")])
+        writer.writerow([r.get("local_date", ""), time_part, r.get("amount_ml", 0), target, csv_safe(r.get("note"))])
     return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
 
@@ -784,6 +849,18 @@ async def root():
 
 
 app.include_router(api)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
 
 app.add_middleware(
     CORSMiddleware,

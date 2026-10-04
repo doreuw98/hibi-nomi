@@ -1,0 +1,48 @@
+{
+  "summary": "Security-audit fixes verified end-to-end. BACKEND 9/9 PASS (new /app/backend/tests/test_security_fixes.py): (1) forgot-password returns only {ok,message} with NO reset_token for both known and unknown emails; (3) reset code is 8-char from alphabet [A-Z\\I\\O + 2-9], case-insensitive, single-use → second use yields 400, invalid code → 400; (2) reset-password revokes ALL existing sessions for the user (old session_token returns 401 on /api/auth/me after reset); (4) rate limiting: 4th forgot-password for same email → 429, 11th failed login for same email → 429; (6) register duplicate email → 409 with generic detail (does NOT contain 'already exists'); (5) CSV export of an intake with note '=HYPERLINK(\"x\")' writes cell starting with apostrophe; (7) response headers include X-Content-Type-Options: nosniff, Strict-Transport-Security, X-Frame-Options: DENY, Referrer-Policy: no-referrer, Cache-Control: no-store. Password for delivered@resend.dev was reset and restored to water123 via two forgot/reset cycles reading codes from Mongo. FRONTEND VERIFIED (390x844 Playwright): login → 'Forgot password?' → step 2 renders with exact subtitle 'We emailed a code to {email}. It expires in 15 minutes.', NO [data-testid=\"issued-code-banner\"] in DOM, reset-code-input + reset-password-input + reset-submit-button all present; wrong-code submit triggers 400 (backend-confirmed detail 'Invalid or expired reset code'). Login with demo@hibinomi.app/water123 lands on Home with quick-add pills. ONE SIDE-CHANNEL ISSUE SURFACED (see rca_of_issue): forgot-password returns HTTP 502 when Resend proxy marks the recipient 'undeliverable' (demo@hibinomi.app) while unknown emails return 200 — breaks the generic-response guarantee of fix (1), enabling user-email enumeration. Both demo@hibinomi.app and delivered@resend.dev confirmed logging in with water123 at the end.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/forgot-password", "issue": "Email-enumeration side channel: the handler calls send_password_reset_email() AFTER storing the reset_token and lets its HTTPException(502) bubble up. For real users whose email the Resend proxy declares 'Undeliverable recipient' (e.g. demo@hibinomi.app → 422 from Resend → 502 back to client), the API responds 502, while unknown emails return 200 generic. This defeats security-fix #1 — an attacker can distinguish real-but-undeliverable, real-and-deliverable, and fake emails. FIX: wrap `await send_password_reset_email(...)` in try/except HTTPException/Exception, log the failure, but still return the generic 200 payload (reset_token is already persisted). File: /app/backend/server.py:525. Observed in /var/log/supervisor/backend.*.log: 'Email send failed: 422 Undeliverable recipient' → '502 Bad Gateway' for demo@hibinomi.app while nobody@example.com returns 200.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Forgot password → step 2 with demo@hibinomi.app", "issue": "Step 2 never renders because backend returns 502 (see critical backend issue above). Flow succeeds with every other email including delivered@resend.dev and non-existent addresses; subtitle text + absence of issued-code-banner verified using nobody@example.com. Not a frontend bug — resolves automatically once the backend swallows email-send failures.", "affected_testIDs": ["forgot-request-button", "reset-code-input"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_security_fixes.py",
+    "/app/test_reports/pytest/pytest_security_fixes.xml"
+  ],
+  "action_items": [
+    "HIGH: In /app/backend/server.py forgot_password() wrap the send_password_reset_email() call in try/except so transport failures (e.g. Resend 'Undeliverable recipient' → 502) never leak to the client. Always return the generic {ok:true, message:...} 200. Log the exception server-side only. Keeps #1 generic-response guarantee intact and lets the demo@hibinomi.app frontend path reach step 2."
+  ],
+  "critical_code_review_comments": [
+    "server.py forgot_password: generic 200 is correct for unknown users and auth_provider=='google', BUT the subsequent send_password_reset_email() can raise HTTPException(502) and that propagates to the client — side-channel. Store token, fire-and-forget email, always return generic.",
+    "server.py reset_password: correctly uppercases/strips code, matches on reset_token, enforces reset_expires with tz-safety, and critically deletes ALL user_sessions for the user so a stolen bearer token stops working after a password reset. ✓",
+    "server.py rate_limit uses a sliding-window deque with time.monotonic(); works per-process (uvicorn --reload single process). Correct keys: 'forgot:ip:*' (10/15m), 'forgot:email:*' (3/15m), 'login:ip:*' (20/15m), 'login:email:*' (10/15m), 'reset:ip:*' (10/15m), 'register:ip:*' (10/15m). Will reset on backend restart — acceptable for in-memory per spec.",
+    "server.py csv_safe prefixes an apostrophe for cells starting with = + - @ \\t \\r — matches OWASP CSV injection guidance. Applied only to note; other columns are numeric/date-safe. ✓",
+    "server.py security_headers middleware is registered BEFORE CORSMiddleware with app.middleware(); FastAPI applies middlewares in reverse add order so security_headers runs on the way back out for every response including errors. Verified X-Content-Type-Options: nosniff + HSTS + X-Frame-Options: DENY + Referrer-Policy: no-referrer + Cache-Control: no-store on /api/.",
+    "RESET_CODE_ALPHABET excludes 0,1,I,O — 32 chars; make_reset_code produces 8 chars = 32^8 ≈ 1.1e12 → fine against 10/IP-15m online brute force. ✓",
+    "server.py register duplicate detail string 'We couldn't create an account with this email. Try signing in or resetting your password.' — generic, no 'already exists'. ✓",
+    "email_service.send_password_reset_email runs _assert_safe_email guardrails (no form/input tags, no credential-asking phrases, https-only links). Good defense in depth.",
+    "frontend forgot-password.tsx: no issued-code-banner anywhere in /app/frontend; subtitle template matches spec exactly; code is .trim()'d before POST (case left as-is but backend upper-cases). All testIDs match request."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_security_fixes.py (new)",
+    "/app/test_reports/iteration_4.json (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 security-fix tests pass)",
+    "frontend": "100% of verifiable UI assertions (step-2 subtitle, no issued-code-banner, reset fields present, wrong-code → 400, demo login → Home with quick-add). Full demo@hibinomi.app step-2 path blocked by the backend 502 issue above."
+  },
+  "seed_data_creation": "Backend tests created several TEST_<uuid>@hibinomi.app accounts (rate-limit, duplicate, CSV-injection users). All transient. delivered@resend.dev password was reset twice and restored to water123; reset_token/reset_expires cleaned up on both delivered@resend.dev and demo@hibinomi.app at the end. Final login check with water123 PASSES for both accounts.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Forgot-password IP rate limit (10/15m) is shared across backend tests + frontend Playwright runs — do backend tests first then wait or restart backend before heavy frontend forgot-password runs, else step-2 UI assertion will fail with step-1 stuck. In-memory rate buckets reset on `sudo supervisorctl restart backend`. Resend sandbox only accepts delivered@resend.dev as a real recipient; any other email → 422 from proxy → currently 502 from our API (see HIGH action item). After the fix, the frontend flow with demo@hibinomi.app will reach step 2 identically to nobody@example.com. Credentials still: demo@hibinomi.app/water123 and delivered@resend.dev/water123.",
+  "rca_of_issue": "ROOT CAUSE: /app/backend/server.py forgot_password() does `await send_password_reset_email(...)` unprotected. send_email() raises HTTPException(502) when the Resend proxy returns 4xx (observed: 422 'Undeliverable recipient' for demo@hibinomi.app). FastAPI returns that 502 to the client — distinguishable from the 200 generic. REPRO: `curl -X POST $BASE/api/auth/forgot-password -d '{\"email\":\"demo@hibinomi.app\"}' -H 'Content-Type: application/json'` → 502, vs `nobody@example.com` → 200. MITIGATION: wrap send call in try/except, log failure, keep returning the generic payload; the reset_token is already persisted so the user can still complete reset via a resend or (in production) via the email they actually received. Severity: HIGH — reintroduces user-email enumeration that fix #1 was meant to close."
+}

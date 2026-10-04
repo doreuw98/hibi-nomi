@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { useRouter } from "expo-router";
 
 import { AuthShell } from "@/src/components/AuthShell";
 import { Button, Field } from "@/src/components/ui";
 import { useToast } from "@/src/context/toast";
 import { api, ApiError } from "@/src/api/client";
-import { fonts, fontSize, makeStyles, radius, spacing } from "@/src/theme";
+import { fonts, fontSize, makeStyles, spacing } from "@/src/theme";
 
 export default function ForgotPassword() {
   const styles = useStyles();
@@ -18,7 +18,6 @@ export default function ForgotPassword() {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const requestCode = async () => {
@@ -29,14 +28,12 @@ export default function ForgotPassword() {
     setErrors({});
     setLoading(true);
     try {
-      const res = await api("/auth/forgot-password", {
+      await api("/auth/forgot-password", {
         method: "POST",
         body: { email: email.trim().toLowerCase() },
       });
-      setIssuedCode(res.reset_token || null);
-      if (res.reset_token) setCode(res.reset_token);
       setStep("reset");
-      toast.show("Reset code issued", "info");
+      toast.show("Check your inbox for the reset code", "info");
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "Could not request reset", "error");
     } finally {
@@ -68,7 +65,11 @@ export default function ForgotPassword() {
   return (
     <AuthShell
       title="Reset password"
-      subtitle={step === "request" ? "Enter your email to get a reset code" : "Enter the code and a new password"}
+      subtitle={
+        step === "request"
+          ? "Enter your email and we'll send you a reset code"
+          : `We emailed a code to ${email.trim()}. It expires in 15 minutes.`
+      }
     >
       {step === "request" ? (
         <>
@@ -86,20 +87,15 @@ export default function ForgotPassword() {
         </>
       ) : (
         <>
-          {issuedCode ? (
-            <View style={styles.codeBanner} testID="issued-code-banner">
-              <Text style={styles.codeLabel}>Your reset code (no email set up)</Text>
-              <Text style={styles.codeValue}>{issuedCode}</Text>
-            </View>
-          ) : null}
           <Field
             label="Reset code"
             testID="reset-code-input"
             value={code}
             onChangeText={setCode}
             error={errors.code}
-            autoCapitalize="none"
-            placeholder="Paste the code"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder="8-character code from your email"
           />
           <Field
             label="New password"
@@ -122,14 +118,6 @@ export default function ForgotPassword() {
 }
 
 const useStyles = makeStyles((c) => ({
-  codeBanner: {
-    backgroundColor: c.brandTertiary,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  codeLabel: { fontFamily: fonts.semibold, fontSize: fontSize.sm, color: c.onBrandTertiary },
-  codeValue: { fontFamily: fonts.extrabold, fontSize: fontSize.xl, color: c.onBrandTertiary, letterSpacing: 1 },
   back: { alignSelf: "center", marginTop: spacing.sm },
   backText: { fontFamily: fonts.bold, fontSize: fontSize.base, color: c.brandPrimary },
 }));

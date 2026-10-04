@@ -42,5 +42,10 @@ Build HIBI NOMI, a personal daily water-intake tracking mobile app (React Native
 - P2: Dark theme; weekly pattern analysis (morning/afternoon) richer insights.
 - P2: Streaks / achievements gamification.
 
+## Security (audit June 2026)
+- Password reset codes are emailed via Emergent-managed Resend (`backend/email_service.py`); API never returns the code. 8-char code, 15-min expiry, single-use; reset revokes all sessions.
+- In-memory rate limiting on login/register/forgot/reset (429). Generic responses for forgot-password and duplicate register. CSV formula escaping. Security headers middleware.
+- Backend env: EMERGENT_EMAIL_KEY, EMAIL_FROM_NAME=HIBI NOMI.
+
 ## Notes
 - Reminders fire on real device / dev build; local notifications don't fire in web preview. Pause resumes when app is next focused after the pause window.
